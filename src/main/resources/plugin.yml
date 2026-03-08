@@ -1,0 +1,54 @@
+﻿name: SwagJobs
+version: 1.0.0
+main: com.swag.swagjobs.SwagJobsPlugin
+api-version: 1.21
+author: Swag
+description: Advanced jobs plugin with prestige system
+
+depend: [Vault, LuckPerms]
+softdepend: [PyroFishing, FleaTags]
+
+commands:
+  jobs:
+    description: Main jobs command
+    usage: /jobs [select|progress|prestige|shop|help]
+    aliases: [job, j]
+  SwagJobsdev:
+    description: Dev/testing commands for SwagJobs (OP only)
+    usage: /<command> <subcommand>
+    permission: SwagJobs.dev
+    permission-message: You are not allowed to use this command.
+  granttag:
+    description: Grant a preset prestige tag to a player
+    usage: /granttag <player> <job> <tier>
+    permission: SwagJobs.admin.granttag
+    permission-message: You don't have permission to use this command.
+
+permissions:
+  SwagJobs.use:
+    description: Use the jobs plugin
+    default: true
+  SwagJobs.admin.reload:
+    description: Reload the plugin config
+    default: op
+  SwagJobs.admin.reset:
+    description: Reset player data
+    default: op
+  SwagJobs.admin.granttag:
+    description: Grant preset prestige tags to players
+    default: op
+  SwagJobs.admin.shopedit:
+    description: Open the prestige shop editor GUI
+    default: op
+  SwagJobs.rank.member:
+    description: Member rank
+    default: true
+  SwagJobs.rank.axolotl:
+    description: Axolotl rank
+    default: false
+  SwagJobs.rank.lizard:
+    description: Lizard rank
+    default: false
+  SwagJobs.rank.flea:
+    description: Flea rank
+    default: false

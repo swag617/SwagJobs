@@ -1,0 +1,1261 @@
+﻿# ====
+# SwagJobs Configuration
+# ====
+
+database:
+  type: SQLITE
+  file: SwagJobs.db
+
+anticheat:
+  enabled: true
+  sample-size: 20
+  min-variance: 4.0
+  max-actions-per-second: 20.0
+  min-cps: 20.0
+  max-cps: 100.0
+  alert-cooldown-seconds: 6
+  ignore-enchants:
+    - trench
+    - veinminer
+    - auto-smelt
+  ignore-ae-enchants:
+    - trench
+    - veinminer
+    - auto-smelt
+
+place-break-max-cycles: 3
+place-break-timeout-seconds: 120
+track-exploit-blocks:
+  - MELON_BLOCK
+  - PUMPKIN
+  - MELON
+
+xp:
+  max-level: 100
+  base-xp-per-level: 250.0
+
+money:
+  base-money-per-level: 6.25
+  money-per-xp: 0.02
+  enabled: true
+
+rank-multipliers:
+  member: 1.0
+  axolotl: 1.05
+  lizard: 1.1
+  flea: 1.15
+
+rank-caps:
+  member: 10
+  axolotl: 15
+  lizard: 20
+  flea: 25
+
+prestige:
+  enabled: true
+  max-prestige: 10
+  xp-gain-per-prestige: 0.02
+  money-per-prestige: 0.08
+  xp-requirement-per-prestige: 0.05
+  reset-level-on-prestige: true
+  keep-unclaimed-rewards: true
+
+prestige-shop:
+  enabled: true
+  items:
+    spawner_key:
+      name: '&6&lSpawner Key'
+      lore:
+        - '&7Unlock a random spawner!'
+        - '&7Cost: &e5 Prestige Points'
+      cost: 5
+      material: TRIPWIRE_HOOK
+      commands:
+        - crate givekey %player% spawner 1
+    vote_key:
+      name: '&b&lVote Key'
+      lore:
+        - '&7A vote crate key!'
+        - '&7Cost: &e2 Prestige Points'
+      cost: 2
+      material: TRIPWIRE_HOOK
+      commands:
+        - crate givekey %player% vote 1
+    rank_voucher:
+      name: '&d&lRank Voucher'
+      lore:
+        - '&7Upgrade your rank!'
+        - '&7Cost: &e15 Prestige Points'
+      cost: 15
+      material: PAPER
+      commands:
+        - rankvoucher give %player% 1
+    iron_spawner:
+      name: '&7&lIron Golem Spawner'
+      lore:
+        - '&7Spawn iron golems!'
+        - '&7Cost: &e10 Prestige Points'
+      cost: 10
+      material: IRON_BLOCK
+      commands:
+        - spawner give %player% IRON_GOLEM 1
+
+boss-bar:
+  enabled: true
+  color: GREEN
+  style: SOLID
+  hide-delay: 2.5
+  title: '&a{job} &7| &fLevel {level} &7| &e{xp}/{xp_required} XP &7({percentage}%) &7| &dPrestige {prestige}'
+
+block-caps:
+  enabled: true
+  blocks:
+    FURNACE:
+      member: 10
+      axolotl: 15
+      lizard: 20
+      flea: 25
+    BLAST_FURNACE:
+      member: 10
+      axolotl: 15
+      lizard: 20
+      flea: 25
+    SMOKER:
+      member: 10
+      axolotl: 15
+      lizard: 20
+      flea: 25
+    BREWING_STAND:
+      member: 10
+      axolotl: 15
+      lizard: 20
+      flea: 25
+
+# ====================================================================
+# JOB CONFIGURATIONS
+# ====================================================================
+
+jobs:
+  miner:
+    enabled: true
+    display-name: '&7&lMiner'
+    icon: DIAMOND_PICKAXE
+    base-xp: 250.0
+    default-money: 0.0052
+    default-xp: 1.03
+    actions:
+      stone:
+        xp: 1.03
+        money: 0.005
+      cobblestone:
+        xp: 2.05
+        money: 0.010
+      mossy_cobblestone:
+        xp: 2.56
+        money: 0.013
+      calcite:
+        xp: 2.05
+        money: 0.010
+      granite:
+        xp: 2.05
+        money: 0.010
+      diorite:
+        xp: 2.05
+        money: 0.010
+      andesite:
+        xp: 2.05
+        money: 0.010
+      tuff:
+        xp: 2.56
+        money: 0.013
+      tuff_bricks:
+        xp: 3.07
+        money: 0.015
+      polished_tuff:
+        xp: 3.07
+        money: 0.015
+      deepslate:
+        xp: 6.15
+        money: 0.030
+      cobbled_deepslate:
+        xp: 6.15
+        money: 0.030
+      deepslate_bricks:
+        xp: 7.17
+        money: 0.035
+      deepslate_tiles:
+        xp: 7.17
+        money: 0.035
+      coal_ore:
+        xp: 7.69
+        money: 0.037
+      iron_ore:
+        xp: 10.25
+        money: 0.050
+      gold_ore:
+        xp: 10.25
+        money: 0.050
+      copper_ore:
+        xp: 7.69
+        money: 0.037
+      raw_iron_block:
+        xp: 76.88
+        money: 0.375
+      raw_gold_block:
+        xp: 76.88
+        money: 0.375
+      raw_copper_block:
+        xp: 51.25
+        money: 0.250
+      lapis_ore:
+        xp: 12.81
+        money: 0.063
+      redstone_ore:
+        xp: 12.81
+        money: 0.063
+      diamond_ore:
+        xp: 15.38
+        money: 0.075
+      emerald_ore:
+        xp: 25.63
+        money: 0.125
+      nether_gold_ore:
+        xp: 6.15
+        money: 0.030
+      nether_quartz_ore:
+        xp: 6.15
+        money: 0.030
+      ancient_debris:
+        xp: 41.00
+        money: 0.200
+      obsidian:
+        xp: 20.50
+        money: 0.100
+      crying_obsidian:
+        xp: 25.63
+        money: 0.125
+      deepslate_coal_ore:
+        xp: 7.69
+        money: 0.037
+      deepslate_iron_ore:
+        xp: 10.25
+        money: 0.050
+      deepslate_copper_ore:
+        xp: 7.69
+        money: 0.037
+      deepslate_gold_ore:
+        xp: 10.25
+        money: 0.050
+      deepslate_lapis_ore:
+        xp: 12.81
+        money: 0.063
+      deepslate_redstone_ore:
+        xp: 12.81
+        money: 0.063
+      deepslate_diamond_ore:
+        xp: 15.38
+        money: 0.075
+      deepslate_emerald_ore:
+        xp: 20.50
+        money: 0.100
+      gravel:
+        xp: 1.54
+        money: 0.008
+      dirt:
+        xp: 1.03
+        money: 0.005
+      clay:
+        xp: 2.05
+        money: 0.010
+      sand:
+        xp: 1.03
+        money: 0.005
+      red_sand:
+        xp: 1.54
+        money: 0.008
+      sandstone:
+        xp: 2.05
+        money: 0.010
+      red_sandstone:
+        xp: 2.05
+        money: 0.010
+      netherrack:
+        xp: 1.03
+        money: 0.005
+      basalt:
+        xp: 2.05
+        money: 0.010
+      terracotta:
+        xp: 2.05
+        money: 0.010
+      blackstone:
+        xp: 2.56
+        money: 0.013
+      end_stone:
+        xp: 3.07
+        money: 0.015
+
+  lumberjack:
+    enabled: true
+    display-name: '&2&lLumberjack'
+    icon: DIAMOND_AXE
+    base-xp: 250.0
+    default-money: 0.0146
+    default-xp: 2.92
+    actions:
+      oak_log:
+        xp: 2.93
+        money: 0.050
+      spruce_log:
+        xp: 2.93
+        money: 0.050
+      birch_log:
+        xp: 2.93
+        money: 0.050
+      jungle_log:
+        xp: 2.93
+        money: 0.050
+      acacia_log:
+        xp: 2.93
+        money: 0.050
+      dark_oak_log:
+        xp: 2.93
+        money: 0.050
+      mangrove_log:
+        xp: 2.93
+        money: 0.050
+      cherry_log:
+        xp: 2.93
+        money: 0.050
+      pale_oak_log:
+        xp: 2.93
+        money: 0.050
+      crimson_stem:
+        xp: 2.93
+        money: 0.050
+      warped_stem:
+        xp: 2.93
+        money: 0.050
+      stripped_oak_log:
+        xp: 3.22
+        money: 0.055
+      stripped_spruce_log:
+        xp: 3.22
+        money: 0.055
+      stripped_birch_log:
+        xp: 3.22
+        money: 0.055
+      stripped_jungle_log:
+        xp: 3.22
+        money: 0.055
+      stripped_acacia_log:
+        xp: 3.22
+        money: 0.055
+      stripped_dark_oak_log:
+        xp: 3.22
+        money: 0.055
+      stripped_mangrove_log:
+        xp: 3.22
+        money: 0.055
+      stripped_cherry_log:
+        xp: 3.22
+        money: 0.055
+      stripped_pale_oak_log:
+        xp: 3.22
+        money: 0.055
+      stripped_crimson_stem:
+        xp: 3.22
+        money: 0.055
+      stripped_warped_stem:
+        xp: 3.22
+        money: 0.055
+      oak_wood:
+        xp: 3.55
+        money: 0.060
+      spruce_wood:
+        xp: 3.55
+        money: 0.060
+      birch_wood:
+        xp: 3.55
+        money: 0.060
+      jungle_wood:
+        xp: 3.55
+        money: 0.060
+      acacia_wood:
+        xp: 3.55
+        money: 0.060
+      dark_oak_wood:
+        xp: 3.55
+        money: 0.060
+      mangrove_wood:
+        xp: 3.55
+        money: 0.060
+      cherry_wood:
+        xp: 3.55
+        money: 0.060
+      pale_oak_wood:
+        xp: 3.55
+        money: 0.060
+      crimson_hyphae:
+        xp: 3.55
+        money: 0.060
+      warped_hyphae:
+        xp: 3.55
+        money: 0.060
+      oak_leaves:
+        xp: 0.07
+        money: 0.001
+      spruce_leaves:
+        xp: 0.07
+        money: 0.001
+      birch_leaves:
+        xp: 0.07
+        money: 0.001
+      pale_oak_leaves:
+        xp: 0.07
+        money: 0.001
+      jungle_leaves:
+        xp: 0.07
+        money: 0.001
+      acacia_leaves:
+        xp: 0.07
+        money: 0.001
+      dark_oak_leaves:
+        xp: 0.07
+        money: 0.001
+      mangrove_leaves:
+        xp: 0.07
+        money: 0.001
+      cherry_leaves:
+        xp: 0.07
+        money: 0.001
+      azalea_leaves:
+        xp: 0.07
+        money: 0.001
+      flowering_azalea_leaves:
+        xp: 0.07
+        money: 0.001
+      crimson_fungus:
+        xp: 0.15
+        money: 0.003
+      warped_fungus:
+        xp: 0.15
+        money: 0.003
+      brown_mushroom_block:
+        xp: 1.48
+        money: 0.025
+      red_mushroom_block:
+        xp: 1.48
+        money: 0.025
+      mushroom_stem:
+        xp: 1.18
+        money: 0.020
+
+  farmer:
+    enabled: true
+    display-name: '&e&lFarmer'
+    icon: DIAMOND_HOE
+    base-xp: 250.0
+    default-money: 0.0117
+    default-xp: 2.34
+    actions:
+      wheat:
+        xp: 2.33
+        money: 0.056
+      carrots:
+        xp: 2.33
+        money: 0.056
+      potatoes:
+        xp: 2.33
+        money: 0.056
+      beetroots:
+        xp: 2.79
+        money: 0.068
+      nether_wart:
+        xp: 3.49
+        money: 0.085
+      sweet_berry_bush:
+        xp: 2.33
+        money: 0.056
+      cocoa:
+        xp: 3.03
+        money: 0.074
+      sugar_cane:
+        xp: 1.86
+        money: 0.045
+      cactus:
+        xp: 1.86
+        money: 0.045
+      bamboo:
+        xp: 1.16
+        money: 0.029
+      pumpkin:
+        xp: 3.61
+        money: 0.088
+      melon:
+        xp: 3.61
+        money: 0.088
+      melon_slice:
+        xp: 0.52
+        money: 0.013
+      brown_mushroom:
+        xp: 1.55
+        money: 0.038
+      red_mushroom:
+        xp: 1.55
+        money: 0.038
+      crimson_fungus:
+        xp: 1.55
+        money: 0.038
+      warped_fungus:
+        xp: 1.55
+        money: 0.038
+      kelp:
+        xp: 1.03
+        money: 0.025
+      sweet_berry_bush_berry:
+        xp: 2.58
+        money: 0.063
+      dandelion:
+        xp: 0.52
+        money: 0.013
+      poppy:
+        xp: 0.52
+        money: 0.013
+      blue_orchid:
+        xp: 0.72
+        money: 0.018
+      allium:
+        xp: 0.72
+        money: 0.018
+      azure_bluet:
+        xp: 0.52
+        money: 0.013
+      tulip:
+        xp: 0.72
+        money: 0.018
+      oxeye_daisy:
+        xp: 0.62
+        money: 0.015
+      sunflower:
+        xp: 1.24
+        money: 0.030
+      lilac:
+        xp: 1.24
+        money: 0.030
+      rose_bush:
+        xp: 1.24
+        money: 0.030
+      peony:
+        xp: 1.24
+        money: 0.030
+      torchflower:
+        xp: 1.55
+        money: 0.038
+      pitcher_plant:
+        xp: 1.55
+        money: 0.038
+
+  fisher:
+    enabled: true
+    display-name: '&b&lFisher'
+    icon: FISHING_ROD
+    base-xp: 250.0
+    default-money: 0.0246
+    default-xp: 4.93
+    vanilla-fishing:
+      enabled: true
+      fish:
+        cod:
+          xp: 0.68
+          money: 0.013
+        salmon:
+          xp: 0.83
+          money: 0.018
+        tropical_fish:
+          xp: 1.03
+          money: 0.021
+        pufferfish:
+          xp: 1.38
+          money: 0.029
+        bow:
+          xp: 2.06
+          money: 0.043
+        enchanted_book:
+          xp: 3.44
+          money: 0.071
+        name_tag:
+          xp: 2.76
+          money: 0.058
+        nautilus_shell:
+          xp: 4.14
+          money: 0.086
+        saddle:
+          xp: 2.76
+          money: 0.058
+        fishing_rod:
+          xp: 1.8
+          money: 0.038
+        leather_boots:
+          xp: 0.3
+          money: 0.006
+        leather:
+          xp: 0.2
+          money: 0.004
+        bone:
+          xp: 0.3
+          money: 0.006
+        string:
+          xp: 0.2
+          money: 0.004
+        stick:
+          xp: 0.1
+          money: 0.002
+    pyrofishing:
+      enabled: true
+      custom-fish:
+        bronze:
+          xp: 1.8
+          money: 0.037
+        silver:
+          xp: 3.6
+          money: 0.075
+        gold:
+          xp: 9.6
+          money: 0.200
+        diamond:
+          xp: 18.0
+          money: 0.375
+        platinum:
+          xp: 48.0
+          money: 1.000
+        mythical:
+          xp: 144.0
+          money: 3.000
+      use-vanilla-fallback: true
+
+  hunter:
+    enabled: true
+    display-name: '&c&lHunter'
+    icon: DIAMOND_SWORD
+    base-xp: 800.0
+    default-money: 0.0270
+    default-xp: 5.40
+    actions:
+      zombie:
+        xp: 5.40
+        money: 0.125
+      skeleton:
+        xp: 5.40
+        money: 0.125
+      creeper:
+        xp: 5.94
+        money: 0.138
+      spider:
+        xp: 6.48
+        money: 0.150
+      cave_spider:
+        xp: 6.48
+        money: 0.150
+      husk:
+        xp: 5.40
+        money: 0.125
+      stray:
+        xp: 4.32
+        money: 0.100
+      drowned:
+        xp: 4.32
+        money: 0.100
+      witch:
+        xp: 6.48
+        money: 0.150
+      pillager:
+        xp: 7.02
+        money: 0.163
+      vindicator:
+        xp: 7.56
+        money: 0.175
+      evoker:
+        xp: 16.20
+        money: 0.375
+      ravager:
+        xp: 27.00
+        money: 0.625
+      phantom:
+        xp: 5.40
+        money: 0.125
+      slime:
+        xp: 2.16
+        money: 0.050
+      magma_cube:
+        xp: 2.16
+        money: 0.050
+      shulker:
+        xp: 8.64
+        money: 0.200
+      breeze:
+        xp: 12.96
+        money: 0.300
+      vex:
+        xp: 4.32
+        money: 0.100
+      silverfish:
+        xp: 1.08
+        money: 0.025
+      endermite:
+        xp: 1.08
+        money: 0.025
+      enderman:
+        xp: 5.40
+        money: 0.125
+      blaze:
+        xp: 6.59
+        money: 0.150
+      wither_skeleton:
+        xp: 7.88
+        money: 0.188
+      piglin:
+        xp: 4.32
+        money: 0.100
+      piglin_brute:
+        xp: 9.72
+        money: 0.225
+      zombified_piglin:
+        xp: 3.24
+        money: 0.075
+      hoglin:
+        xp: 6.48
+        money: 0.150
+      zoglin:
+        xp: 7.56
+        money: 0.175
+      ghast:
+        xp: 10.80
+        money: 0.250
+      strider:
+        xp: 2.16
+        money: 0.050
+      guardian:
+        xp: 6.48
+        money: 0.150
+      elder_guardian:
+        xp: 108.00
+        money: 2.500
+      squid:
+        xp: 1.62
+        money: 0.038
+      glow_squid:
+        xp: 2.16
+        money: 0.050
+      dolphin:
+        xp: 3.24
+        money: 0.075
+      turtle:
+        xp: 2.16
+        money: 0.050
+      axolotl:
+        xp: 1.08
+        money: 0.025
+      cow:
+        xp: 1.08
+        money: 0.025
+      mooshroom:
+        xp: 1.62
+        money: 0.038
+      pig:
+        xp: 1.08
+        money: 0.025
+      sheep:
+        xp: 1.08
+        money: 0.025
+      chicken:
+        xp: 0.86
+        money: 0.020
+      rabbit:
+        xp: 1.08
+        money: 0.025
+      horse:
+        xp: 2.16
+        money: 0.050
+      donkey:
+        xp: 2.16
+        money: 0.050
+      mule:
+        xp: 2.16
+        money: 0.050
+      zombie_horse:
+        xp: 4.32
+        money: 0.100
+      skeleton_horse:
+        xp: 4.32
+        money: 0.100
+      llama:
+        xp: 2.16
+        money: 0.050
+      wolf:
+        xp: 2.16
+        money: 0.050
+      cat:
+        xp: 1.08
+        money: 0.025
+      fox:
+        xp: 1.62
+        money: 0.038
+      bee:
+        xp: 1.08
+        money: 0.025
+      frog:
+        xp: 1.08
+        money: 0.025
+      goat:
+        xp: 2.16
+        money: 0.050
+      allay:
+        xp: 1.08
+        money: 0.025
+      armadillo:
+        xp: 1.62
+        money: 0.038
+      camel:
+        xp: 3.24
+        money: 0.075
+      sniffer:
+        xp: 10.80
+        money: 0.250
+      villager:
+        xp: 0.54
+        money: 0.013
+      wandering_trader:
+        xp: 1.08
+        money: 0.025
+      iron_golem:
+        xp: 16.20
+        money: 0.375
+      snow_golem:
+        xp: 2.16
+        money: 0.050
+      polar_bear:
+        xp: 6.48
+        money: 0.150
+      panda:
+        xp: 3.24
+        money: 0.075
+      ocelot:
+        xp: 2.16
+        money: 0.050
+      parrot:
+        xp: 1.08
+        money: 0.025
+      bat:
+        xp: 0.54
+        money: 0.013
+      warden:
+        xp: 162.00
+        money: 3.750
+      ender_dragon:
+        xp: 540.00
+        money: 12.500
+      wither:
+        xp: 432.00
+        money: 10.000
+      # Custom
+      mannequin:
+        xp: 5.40
+        money: 0.125
+
+  builder:
+    enabled: true
+    display-name: '&6&lBuilder'
+    icon: BRICKS
+    base-xp: 250.0
+    default-money: 0.0125
+    default-xp: 0.625
+    actions:
+      stone_bricks:
+        xp: 1.67
+        money: 0.041
+      stone:
+        xp: 1.2
+        money: 0.030
+      smooth_stone:
+        xp: 1.4
+        money: 0.035
+      polished_andesite:
+        xp: 1.4
+        money: 0.035
+      polished_diorite:
+        xp: 1.4
+        money: 0.035
+      polished_granite:
+        xp: 1.4
+        money: 0.035
+      dirt:
+        xp: 0.5
+        money: 0.013
+      grass_block:
+        xp: 0.6
+        money: 0.015
+      bricks:
+        xp: 1.67
+        money: 0.041
+      quartz_block:
+        xp: 2.5
+        money: 0.063
+      quartz_bricks:
+        xp: 2.6
+        money: 0.065
+      smooth_quartz:
+        xp: 2.6
+        money: 0.065
+      prismarine:
+        xp: 2.5
+        money: 0.063
+      prismarine_bricks:
+        xp: 2.7
+        money: 0.068
+      dark_prismarine:
+        xp: 2.7
+        money: 0.068
+      purpur_block:
+        xp: 2.5
+        money: 0.063
+      purpur_pillar:
+        xp: 2.6
+        money: 0.065
+      end_stone_bricks:
+        xp: 2.5
+        money: 0.063
+      blackstone:
+        xp: 2.0
+        money: 0.050
+      polished_blackstone:
+        xp: 2.2
+        money: 0.055
+      polished_blackstone_bricks:
+        xp: 2.5
+        money: 0.063
+      gilded_blackstone:
+        xp: 2.7
+        money: 0.068
+      deepslate_bricks:
+        xp: 2.5
+        money: 0.063
+      deepslate_tiles:
+        xp: 2.5
+        money: 0.063
+      cracked_deepslate_bricks:
+        xp: 2.4
+        money: 0.060
+      cracked_deepslate_tiles:
+        xp: 2.4
+        money: 0.060
+      glass:
+        xp: 1.0
+        money: 0.025
+      tinted_glass:
+        xp: 1.5
+        money: 0.038
+      white_wool:
+        xp: 0.8
+        money: 0.020
+      white_concrete:
+        xp: 1.5
+        money: 0.038
+      white_terracotta:
+        xp: 1.5
+        money: 0.038
+      white_glazed_terracotta:
+        xp: 2.0
+        money: 0.050
+      terracotta:
+        xp: 1.5
+        money: 0.038
+      oak_planks:
+        xp: 0.17
+        money: 0.004
+      spruce_planks:
+        xp: 0.17
+        money: 0.004
+      birch_planks:
+        xp: 0.17
+        money: 0.004
+      jungle_planks:
+        xp: 0.17
+        money: 0.004
+      acacia_planks:
+        xp: 0.17
+        money: 0.004
+      dark_oak_planks:
+        xp: 0.17
+        money: 0.004
+      mangrove_planks:
+        xp: 0.17
+        money: 0.004
+      cherry_planks:
+        xp: 0.17
+        money: 0.004
+      pale_oak_planks:
+        xp: 0.17
+        money: 0.004
+      bamboo_planks:
+        xp: 0.17
+        money: 0.004
+      crimson_planks:
+        xp: 0.17
+        money: 0.004
+      warped_planks:
+        xp: 0.17
+        money: 0.004
+      mud_bricks:
+        xp: 1.6
+        money: 0.040
+      packed_mud:
+        xp: 1.2
+        money: 0.030
+      sandstone:
+        xp: 1.2
+        money: 0.030
+      red_sandstone:
+        xp: 1.2
+        money: 0.030
+      smooth_sandstone:
+        xp: 1.4
+        money: 0.035
+      cut_sandstone:
+        xp: 1.4
+        money: 0.035
+      cut_red_sandstone:
+        xp: 1.4
+        money: 0.035
+      nether_bricks:
+        xp: 1.8
+        money: 0.045
+      red_nether_bricks:
+        xp: 1.9
+        money: 0.048
+      cracked_nether_bricks:
+        xp: 1.7
+        money: 0.043
+
+  enchanter:
+    enabled: true
+    display-name: '&d&lEnchanter'
+    icon: ENCHANTING_TABLE
+    base-xp: 250.0
+    default-money: 0.225
+    default-xp: 4.5
+    actions:
+      level_1:
+        xp: 15.0
+        money: 0.281
+      level_2:
+        xp: 30.0
+        money: 0.563
+      level_3:
+        xp: 45.0
+        money: 0.844
+
+  smelter:
+    enabled: true
+    display-name: '&e&lSmelter'
+    icon: FURNACE
+    base-xp: 250.0
+    default-money: 0.0213
+    default-xp: 4.25
+    actions:
+      iron_ingot:
+        xp: 4.26
+        money: 0.113
+      gold_ingot:
+        xp: 4.26
+        money: 0.113
+      copper_ingot:
+        xp: 3.20
+        money: 0.084
+      netherite_scrap:
+        xp: 17.04
+        money: 0.450
+      # Other smelting
+      glass:
+        xp: 2.13
+        money: 0.056
+      stone:
+        xp: 1.28
+        money: 0.034
+      smooth_stone:
+        xp: 1.70
+        money: 0.045
+      brick:
+        xp: 2.13
+        money: 0.056
+      terracotta:
+        xp: 2.56
+        money: 0.068
+      nether_brick:
+        xp: 2.13
+        money: 0.056
+      cooked_beef:
+        xp: 1.28
+        money: 0.034
+      cooked_porkchop:
+        xp: 1.28
+        money: 0.034
+      cooked_chicken:
+        xp: 1.28
+        money: 0.034
+      cooked_mutton:
+        xp: 1.28
+        money: 0.034
+      cooked_rabbit:
+        xp: 1.28
+        money: 0.034
+      cooked_cod:
+        xp: 1.28
+        money: 0.034
+      cooked_salmon:
+        xp: 1.28
+        money: 0.034
+      dried_kelp:
+        xp: 1.07
+        money: 0.028
+      charcoal:
+        xp: 1.28
+        money: 0.034
+      iron_nugget:
+        xp: 0.64
+        money: 0.017
+      gold_nugget:
+        xp: 0.64
+        money: 0.017
+
+  brewer:
+    enabled: true
+    display-name: '&5&lBrewer'
+    icon: BREWING_STAND
+    base-xp: 250.0
+    default-money: 0.225
+    default-xp: 4.5
+    actions:
+      awkward_potion:
+        xp: 15.0
+        money: 0.281
+      thick_potion:
+        xp: 12.0
+        money: 0.225
+      mundane_potion:
+        xp: 12.0
+        money: 0.225
+      potion:
+        xp: 21.0
+        money: 0.394
+      splash_potion:
+        xp: 24.0
+        money: 0.450
+      lingering_potion:
+        xp: 27.0
+        money: 0.506
+
+  crafter:
+    enabled: true
+    display-name: '&a&lCrafter'
+    icon: CRAFTING_TABLE
+    base-xp: 250.0
+    default-money: 0.0281
+    default-xp: 2.25
+    actions:
+      wooden_pickaxe:
+        xp: 3.0
+        money: 0.056
+      stone_pickaxe:
+        xp: 4.5
+        money: 0.084
+      iron_pickaxe:
+        xp: 9.0
+        money: 0.169
+      golden_pickaxe:
+        xp: 9.0
+        money: 0.169
+      diamond_pickaxe:
+        xp: 18.0
+        money: 0.338
+      netherite_pickaxe:
+        xp: 36.0
+        money: 0.675
+      wooden_sword:
+        xp: 3.0
+        money: 0.056
+      stone_sword:
+        xp: 4.5
+        money: 0.084
+      iron_sword:
+        xp: 9.0
+        money: 0.169
+      golden_sword:
+        xp: 9.0
+        money: 0.169
+      diamond_sword:
+        xp: 18.0
+        money: 0.338
+      netherite_sword:
+        xp: 36.0
+        money: 0.675
+      leather_helmet:
+        xp: 6.0
+        money: 0.113
+      leather_chestplate:
+        xp: 9.0
+        money: 0.169
+      leather_leggings:
+        xp: 7.5
+        money: 0.141
+      leather_boots:
+        xp: 4.5
+        money: 0.084
+      iron_helmet:
+        xp: 12.0
+        money: 0.225
+      iron_chestplate:
+        xp: 18.0
+        money: 0.338
+      iron_leggings:
+        xp: 15.0
+        money: 0.281
+      iron_boots:
+        xp: 9.0
+        money: 0.169
+      diamond_helmet:
+        xp: 24.0
+        money: 0.450
+      diamond_chestplate:
+        xp: 36.0
+        money: 0.675
+      diamond_leggings:
+        xp: 30.0
+        money: 0.563
+      diamond_boots:
+        xp: 18.0
+        money: 0.338
+      stick:
+        xp: 0.3
+        money: 0.006
+      chest:
+        xp: 3.0
+        money: 0.056
+      crafting_table:
+        xp: 1.5
+        money: 0.028
+      furnace:
+        xp: 4.5
+        money: 0.084
+      torch:
+        xp: 0.6
+        money: 0.011
+      ladder:
+        xp: 0.9
+        money: 0.017
+      door:
+        xp: 1.8
+        money: 0.034
+      fence:
+        xp: 0.9
+        money: 0.017

@@ -1,0 +1,40 @@
+items:
+  infinite_block_key:
+    slot: 10
+    material: TRIPWIRE_HOOK
+    name: 'Infinite Block Key'
+    rarity: COMMON
+    lore:
+      - '&7Unlock an Infinite Block!'
+    cost: 20
+    type: COMMAND
+    commands:
+      - 'crate givekey %player% infiniteblock 1'
+    max-purchases: -1
+    enabled: true
+
+  rank_upgrade:
+    slot: 13
+    material: NETHER_STAR
+    name: 'Rank Upgrade'
+    rarity: LEGENDARY
+    lore:
+      - '&7Instantly promotes your rank!'
+    cost: 250
+    type: COMMAND
+    commands:
+      - 'lp user %player% parent promote default'
+    max-purchases: 1
+    enabled: true
+
+  diamond_block_example:
+    slot: 16
+    material: DIAMOND_BLOCK
+    name: 'Diamond Block'
+    rarity: UNCOMMON
+    lore:
+      - '&7A physical item!'
+    cost: 30
+    type: ITEM
+    max-purchases: -1
+    enabled: true
