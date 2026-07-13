@@ -1,4 +1,4 @@
-﻿package com.swag.swagjobs.model;
+package com.swag.swagjobs.model;
 
 import org.bukkit.ChatColor;
 import org.bukkit.Material;
@@ -11,8 +11,6 @@ import java.util.List;
 public class PrestigeShopItem {
 
     public enum ShopItemType { ITEM, COMMAND }
-
-    // ---- Rarity helpers ----
 
     /**
      * Apply the rarity color prefix to a base name string.
@@ -47,8 +45,6 @@ public class PrestigeShopItem {
         };
     }
 
-    // ---- Fields ----
-
     private final String id;
     private int slot;
     private Material material;
@@ -67,8 +63,6 @@ public class PrestigeShopItem {
         this.commands = new ArrayList<>();
         this.lore = new ArrayList<>();
     }
-
-    // ---- Static factory ----
 
     public static PrestigeShopItem fromSection(String id, ConfigurationSection section) {
         PrestigeShopItem item = new PrestigeShopItem(id);
@@ -124,8 +118,6 @@ public class PrestigeShopItem {
         section.set("enabled", enabled);
     }
 
-    // ---- Builder ----
-
     public static Builder builder(String id) {
         return new Builder(id);
     }
@@ -159,14 +151,10 @@ public class PrestigeShopItem {
         public PrestigeShopItem build() { return item; }
     }
 
-    // ---- Convenience ----
-
     /** Returns the display name with rarity prefix applied (& codes translated). */
     public String getFormattedName() {
         return applyRarityPrefix(rarity, name);
     }
-
-    // ---- Getters / Setters ----
 
     public String getId()   { return id; }
 

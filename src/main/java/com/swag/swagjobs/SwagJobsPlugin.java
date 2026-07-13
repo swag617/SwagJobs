@@ -1,4 +1,4 @@
-﻿package com.swag.swagjobs;
+package com.swag.swagjobs;
 
 import com.swag.swagjobs.command.DevCommand;
 import com.swag.swagjobs.command.GrantTagCommand;
@@ -6,6 +6,7 @@ import com.swag.swagjobs.command.JobsCommand;
 import com.swag.swagjobs.command.JobsTabCompleter;
 import com.swag.swagjobs.config.JobsConfig;
 import com.swag.swagjobs.database.DatabaseManager;
+import com.swag.swagjobs.integrations.AdvancedEnchantmentsIntegration;
 import com.swag.swagjobs.listener.*;
 import com.swag.swagjobs.manager.*;
 import net.milkbowl.vault.economy.Economy;
@@ -37,12 +38,20 @@ public class SwagJobsPlugin extends JavaPlugin {
     private BossBarManager bossBarManager;
     private PrestigeManager prestigeManager;
     private SmelterCapManager smelterCapManager;
-    private Economy economy;
+    // MIGRATED: Vault economy hook replaced by SwagAPI IEconomyService (see hookSwagAPI() / ecoService field below)
+    // private Economy economy;
     private Messages messages;
-    private CheatDetectionManager cheatDetectionManager;
     private VanishManager vanishManager;
     private TagManager tagManager;
     private PrestigeShopManager prestigeShopManager;
+    private PlaceBreakManager placeBreakManager;
+    private AdvancedEnchantmentsIntegration advancedEnchantmentsIntegration;
+
+    // ── SwagAPI service references ─────────────────────────────────────────────
+    private com.SwagDev.SwagAPI.api.IDatabaseService   dbService;
+    private com.SwagDev.SwagAPI.api.IEconomyService    ecoService;
+    private com.SwagDev.SwagAPI.api.IPlayerDataService playerService;
+    private com.SwagDev.SwagAPI.api.IEventBusService   busService;
 
     @Override
     public void onEnable() {
@@ -51,11 +60,16 @@ public class SwagJobsPlugin extends JavaPlugin {
             getLogger().info("Initializing SwagJobs...");
             saveDefaultConfig();
 
+            // ── Step 1: Hook SwagAPI (must be first) ──────────────────────────────
+            if (!hookSwagAPI()) {
+                getServer().getPluginManager().disablePlugin(this);
+                return;
+            }
+
             this.messages = new Messages();
-            this.databaseManager = new DatabaseManager(this);
+            this.databaseManager = new DatabaseManager(this, dbService);
             this.databaseManager.connect();
 
-            this.cheatDetectionManager = new CheatDetectionManager(this);
             this.playerDataManager = new PlayerDataManager(this);
             this.jobsConfig = new JobsConfig(this);
             this.jobManager = new JobManager(this);
@@ -66,12 +80,13 @@ public class SwagJobsPlugin extends JavaPlugin {
             this.prestigeShopManager = new PrestigeShopManager(this);
             this.prestigeShopManager.load();
 
-            // Initialize smelter cap manager BEFORE registering listeners that use it
             this.smelterCapManager = new SmelterCapManager(this);
+            this.placeBreakManager = new PlaceBreakManager(this);
+            this.advancedEnchantmentsIntegration = new AdvancedEnchantmentsIntegration(this);
 
-            setupEconomy();
+            // MIGRATED: setupEconomy() replaced by SwagAPI IEconomyService, hooked in hookSwagAPI() above
+            // setupEconomy();
 
-            // Register listeners
             getServer().getPluginManager().registerEvents(new PlayerJoinListener(this), this);
             getServer().getPluginManager().registerEvents(new MinerListener(this), this);
             getServer().getPluginManager().registerEvents(new LumberjackListener(this), this);
@@ -89,7 +104,7 @@ public class SwagJobsPlugin extends JavaPlugin {
             getServer().getPluginManager().registerEvents(new PlayerQuitListener(this), this);
             getServer().getPluginManager().registerEvents(new SlimeFixListener(), this);
 
-            // Small helper listener to mark placed blocks
+            // Marks player-placed blocks so job listeners can skip naturally-generated blocks
             getServer().getPluginManager().registerEvents(new Listener() {
                 @EventHandler(priority = EventPriority.MONITOR, ignoreCancelled = true)
                 public void onPlace(BlockPlaceEvent e) {
@@ -97,10 +112,9 @@ public class SwagJobsPlugin extends JavaPlugin {
                 }
             }, this);
 
-            // Delay command registration by 1 tick to avoid Paper's async command builder concurrency issue
+            // Delay by 1 tick to avoid Paper's async command builder concurrency issue
             getServer().getScheduler().runTaskLater(this, () -> {
                 try {
-                    // Create command handler instances
                     JobsCommand jobsCmd = new JobsCommand(this);
                     JobsTabCompleter jobsTab = new JobsTabCompleter(this);
                     DevCommand devCmd = new DevCommand(this);
@@ -110,7 +124,6 @@ public class SwagJobsPlugin extends JavaPlugin {
                     boolean jobsRegistered = false;
                     boolean devRegistered = false;
 
-                    // First try the normal plugin.yml-backed registration (preferred)
                     try {
                         if (getCommand("jobs") != null) {
                             getCommand("jobs").setExecutor(jobsCmd);
@@ -135,7 +148,6 @@ public class SwagJobsPlugin extends JavaPlugin {
                         getLogger().warning("Standard registration for 'SwagJobsdev' failed: " + e.getMessage());
                     }
 
-                    // If normal registration failed or PlugMan left a ghost command, force-register into the CommandMap
                     if (!jobsRegistered) {
                         tryRegisterCommandForce("jobs", jobsCmd, jobsTab);
                         jobsRegistered = true;
@@ -147,7 +159,6 @@ public class SwagJobsPlugin extends JavaPlugin {
                         getLogger().info("Force-registered 'SwagJobsdev' into CommandMap via reflection.");
                     }
 
-                    // Register /granttag command
                     try {
                         if (getCommand("granttag") != null) {
                             getCommand("granttag").setExecutor(grantTagCmd);
@@ -160,7 +171,6 @@ public class SwagJobsPlugin extends JavaPlugin {
 
                     getLogger().info("Commands registered successfully.");
 
-                    // Load online players into memory AFTER commands and managers are initialized
                     for (Player player : getServer().getOnlinePlayers()) {
                         try {
                             playerDataManager.loadPlayer(player);
@@ -184,25 +194,21 @@ public class SwagJobsPlugin extends JavaPlugin {
     }
 
     /**
-     * Force-register a command into the server CommandMap via reflection.
-     * This creates a lightweight Command that delegates execute/tabComplete
-     * to your CommandExecutor / TabCompleter instances.
+     * Force-registers a command into the server CommandMap via reflection when normal
+     * plugin.yml registration fails (e.g. after a PlugMan reload leaving ghost entries).
      */
     private void tryRegisterCommandForce(String name, Object executorObj, TabCompleter tabCompleter) {
         try {
-            // Get server command map via reflection
             CommandMap commandMap = getCommandMap();
             if (commandMap == null) {
                 getLogger().warning("CommandMap not found; cannot force-register command: " + name);
                 return;
             }
 
-            // Build delegate command that calls your executor's onCommand method
             org.bukkit.command.Command delegate = new org.bukkit.command.Command(name) {
                 @Override
                 public boolean execute(CommandSender sender, String label, String[] args) {
                     try {
-                        // executorObj should be JobsCommand or DevCommand which implement CommandExecutor
                         if (executorObj instanceof org.bukkit.command.CommandExecutor) {
                             return ((org.bukkit.command.CommandExecutor) executorObj).onCommand(sender, this, label, args);
                         }
@@ -226,7 +232,6 @@ public class SwagJobsPlugin extends JavaPlugin {
                 }
             };
 
-            // Register under your plugin's name to avoid collisions
             commandMap.register(getDescription().getName().toLowerCase(), delegate);
         } catch (Exception ex) {
             getLogger().severe("Failed to force-register command '" + name + "': " + ex.getMessage());
@@ -234,9 +239,6 @@ public class SwagJobsPlugin extends JavaPlugin {
         }
     }
 
-    /**
-     * Reflection helper to obtain the server CommandMap.
-     */
     private CommandMap getCommandMap() {
         try {
             Object server = Bukkit.getServer();
@@ -273,19 +275,77 @@ public class SwagJobsPlugin extends JavaPlugin {
                 ex.printStackTrace();
             }
         }
-        if (databaseManager != null) databaseManager.close();
+        if (placeBreakManager != null) placeBreakManager.stopCleanupTask();
+        // MIGRATED: connection pool is owned by SwagAPI — do not close it here
+        // if (databaseManager != null) databaseManager.close();
         if (bossBarManager != null) bossBarManager.removeAll();
         getLogger().info("SwagJobs has been disabled!");
     }
 
-    private void setupEconomy() {
-        if (getServer().getPluginManager().getPlugin("Vault") == null) return;
-        RegisteredServiceProvider<Economy> rsp = getServer().getServicesManager().getRegistration(Economy.class);
-        if (rsp == null) return;
-        economy = rsp.getProvider();
+    // MIGRATED: replaced by SwagAPI IEconomyService, hooked in hookSwagAPI() below
+    // private void setupEconomy() {
+    //     if (getServer().getPluginManager().getPlugin("Vault") == null) return;
+    //     RegisteredServiceProvider<Economy> rsp = getServer().getServicesManager().getRegistration(Economy.class);
+    //     if (rsp == null) return;
+    //     economy = rsp.getProvider();
+    // }
+
+    /**
+     * Hooks all SwagAPI services this plugin needs. IDatabaseService is a hard
+     * requirement — if it's missing, SwagAPI isn't loaded and the plugin disables itself.
+     */
+    private boolean hookSwagAPI() {
+        org.bukkit.plugin.ServicesManager sm = getServer().getServicesManager();
+
+        // Database — required
+        org.bukkit.plugin.RegisteredServiceProvider<com.SwagDev.SwagAPI.api.IDatabaseService> dbProv =
+                sm.getRegistration(com.SwagDev.SwagAPI.api.IDatabaseService.class);
+        if (dbProv == null) {
+            getLogger().severe("SwagAPI IDatabaseService not found! Is SwagAPI loaded? Disabling.");
+            return false;
+        }
+        dbService = dbProv.getProvider();
+        getLogger().info("Hooked SwagAPI IDatabaseService.");
+
+        // Economy
+        org.bukkit.plugin.RegisteredServiceProvider<com.SwagDev.SwagAPI.api.IEconomyService> ecoProv =
+                sm.getRegistration(com.SwagDev.SwagAPI.api.IEconomyService.class);
+        if (ecoProv != null) {
+            ecoService = ecoProv.getProvider();
+            if (ecoService.isEnabled()) {
+                getLogger().info("Hooked SwagAPI IEconomyService (" + ecoService.getCurrencyName() + ").");
+            } else {
+                getLogger().warning("SwagAPI IEconomyService not available — economy features disabled.");
+            }
+        }
+
+        // Player data — TODO: Consider registering job data as a PlayerDataModule with SwagAPI
+        // IPlayerDataService in a future pass. For now we only hook the service reference;
+        // PlayerDataManager continues to own its own SQLite-backed player data.
+        org.bukkit.plugin.RegisteredServiceProvider<com.SwagDev.SwagAPI.api.IPlayerDataService> playerProv =
+                sm.getRegistration(com.SwagDev.SwagAPI.api.IPlayerDataService.class);
+        if (playerProv != null) {
+            playerService = playerProv.getProvider();
+            getLogger().info("Hooked SwagAPI IPlayerDataService.");
+        }
+
+        // Event bus — used to publish swagjobs:level_up
+        org.bukkit.plugin.RegisteredServiceProvider<com.SwagDev.SwagAPI.api.IEventBusService> busProv =
+                sm.getRegistration(com.SwagDev.SwagAPI.api.IEventBusService.class);
+        if (busProv != null) {
+            busService = busProv.getProvider();
+            getLogger().info("Hooked SwagAPI IEventBusService.");
+        }
+
+        getLogger().info("SwagAPI hook complete.");
+        return true;
     }
 
-    public Economy getEconomy() { return economy; }
+    public com.SwagDev.SwagAPI.api.IDatabaseService   getDbService()     { return dbService; }
+    public com.SwagDev.SwagAPI.api.IEconomyService    getEcoService()    { return ecoService; }
+    public com.SwagDev.SwagAPI.api.IPlayerDataService getPlayerService() { return playerService; }
+    public com.SwagDev.SwagAPI.api.IEventBusService   getBusService()    { return busService; }
+
     public static SwagJobsPlugin getInstance() { return instance; }
     public DatabaseManager getDatabaseManager() { return databaseManager; }
     public PlayerDataManager getPlayerDataManager() { return playerDataManager; }
@@ -298,18 +358,21 @@ public class SwagJobsPlugin extends JavaPlugin {
     public VanishManager getVanishManager() { return vanishManager; }
     public TagManager getTagManager() { return tagManager; }
 
-    // Forwarding helper so old calls to plugin.getCapForPlayer(...) still work
     public int getCapForPlayer(Player player) {
         if (smelterCapManager == null) return 0;
         return smelterCapManager.getCapForPlayer(player);
     }
 
-    public CheatDetectionManager getCheatDetectionManager() {
-        return cheatDetectionManager;
-    }
-
     public PrestigeShopManager getPrestigeShopManager() {
         return prestigeShopManager;
+    }
+
+    public PlaceBreakManager getPlaceBreakManager() {
+        return placeBreakManager;
+    }
+
+    public AdvancedEnchantmentsIntegration getAdvancedEnchantmentsIntegration() {
+        return advancedEnchantmentsIntegration;
     }
 
     public class Messages {

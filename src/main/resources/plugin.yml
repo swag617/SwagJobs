@@ -5,8 +5,9 @@ api-version: 1.21
 author: Swag
 description: Advanced jobs plugin with prestige system
 
-depend: [Vault, LuckPerms]
-softdepend: [PyroFishing, FleaTags]
+depend: [SwagAPI]
+softdepend: [SwagFishing, SwagTags]
+# Vault removed from depend — SwagAPI's IEconomyService now handles economy (see SwagJobsPlugin#hookSwagAPI)
 
 commands:
   jobs:

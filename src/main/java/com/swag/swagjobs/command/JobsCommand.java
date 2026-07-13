@@ -1,4 +1,4 @@
-﻿package com.swag.swagjobs.command;
+package com.swag.swagjobs.command;
 
 import com.swag.swagjobs.SwagJobsPlugin;
 import com.swag.swagjobs.gui.JobProgressGUI;
@@ -130,13 +130,32 @@ public class JobsCommand implements CommandExecutor, TabCompleter {
             }
 
             case "debug" -> {
-                // Toggle per-player debug mode (JobManager holds the set)
                 if (!player.hasPermission("SwagJobs.admin")) {
                     player.sendMessage("§cYou don't have permission to use debug mode.");
                     return true;
                 }
                 JobManager jm = plugin.getJobManager();
                 jm.toggleDebug(player);
+                return true;
+            }
+
+            case "top" -> {
+                Job job;
+                if (args.length < 2) {
+                    PlayerJobData data = plugin.getPlayerDataManager().getPlayerData(player.getUniqueId());
+                    job = data.getActiveJob();
+                    if (job == null) {
+                        player.sendMessage("§cUsage: /jobs top <job> (or select an active job first)");
+                        return true;
+                    }
+                } else {
+                    job = parseJob(args[1]);
+                    if (job == null) {
+                        player.sendMessage("§cInvalid job! Available: " + getJobList());
+                        return true;
+                    }
+                }
+                handleTop(player, job);
                 return true;
             }
 
@@ -159,20 +178,16 @@ public class JobsCommand implements CommandExecutor, TabCompleter {
             return;
         }
 
-        // Teleport admin to the target
         admin.teleport(target.getLocation());
         admin.sendMessage(ChatColor.GREEN + "Teleported to " + target.getName() + ".");
 
-        // Simple vanish: hide admin from non-admins
         setVanished(admin, true);
 
-        // Mark admin (optional metadata) so other parts can know they're investigating
         admin.setMetadata("SwagJobs_investigating", new FixedMetadataValue(plugin, target.getUniqueId()));
 
         admin.sendMessage(ChatColor.YELLOW + "You are now vanished to non-admins. Use /jobs help to find how to unvanish.");
     }
 
-    // Simple local vanish implementation (hides admin from players without SwagJobs.admin)
     private void setVanished(Player admin, boolean vanish) {
         if (vanish) {
             for (Player p : Bukkit.getOnlinePlayers()) {
@@ -224,6 +239,38 @@ public class JobsCommand implements CommandExecutor, TabCompleter {
         plugin.getPrestigeManager().prestige(player, activeJob);
     }
 
+    private void handleTop(Player player, Job job) {
+        List<com.swag.swagjobs.database.DatabaseManager.TopEntry> entries =
+                plugin.getDatabaseManager().getTopPlayers(job, 10);
+
+        player.sendMessage("§8§m                    ");
+        player.sendMessage("§a§lTop 10 " + job.getDisplayName() + "§a§ls");
+        player.sendMessage("§8§m                    ");
+
+        if (entries.isEmpty()) {
+            player.sendMessage("§7No players have progress in this job yet.");
+        } else {
+            int rank = 1;
+            for (var entry : entries) {
+                String name = Bukkit.getOfflinePlayer(entry.uuid).getName();
+                if (name == null) name = "Unknown";
+
+                String rankColor = switch (rank) {
+                    case 1 -> "§6";
+                    case 2 -> "§7";
+                    case 3 -> "§c";
+                    default -> "§f";
+                };
+
+                String prestigeTag = entry.prestige > 0 ? " §d[P" + entry.prestige + "]" : "";
+                player.sendMessage(rankColor + "#" + rank + " §7" + name + prestigeTag +
+                        " §8- §fLevel " + entry.level + " §7(" + String.format("%.0f", entry.xp) + " xp)");
+                rank++;
+            }
+        }
+        player.sendMessage("§8§m                    ");
+    }
+
     private Job parseJob(String name) {
         try {
             return Job.valueOf(name.toUpperCase());
@@ -248,6 +295,7 @@ public class JobsCommand implements CommandExecutor, TabCompleter {
         player.sendMessage("§e/jobs progress [job] §7- View job progress");
         player.sendMessage("§e/jobs prestige §7- Prestige your active job");
         player.sendMessage("§e/jobs shop §7- Open prestige shop");
+        player.sendMessage("§e/jobs top <job> §7- View the top 10 players for a job");
         player.sendMessage("§e/jobs investigate <player> §7- Teleport & vanish to investigate (admin)");
         if (player.hasPermission("SwagJobs.admin.shopedit")) {
             player.sendMessage("§c/jobs shopedit §7- Open shop editor (admin)");
@@ -267,9 +315,9 @@ public class JobsCommand implements CommandExecutor, TabCompleter {
         List<String> completions = new ArrayList<>();
 
         if (args.length == 1) {
-            completions.addAll(Arrays.asList("select", "progress", "prestige", "shop", "shopedit", "help", "reload", "investigate", "debug"));
+            completions.addAll(Arrays.asList("select", "progress", "prestige", "shop", "shopedit", "top", "help", "reload", "investigate", "debug"));
         } else if (args.length == 2) {
-            if (args[0].equalsIgnoreCase("select") || args[0].equalsIgnoreCase("progress")) {
+            if (args[0].equalsIgnoreCase("select") || args[0].equalsIgnoreCase("progress") || args[0].equalsIgnoreCase("top")) {
                 completions.addAll(Arrays.stream(Job.values())
                         .map(Job::name)
                         .map(String::toLowerCase)

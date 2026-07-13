@@ -1,4 +1,4 @@
-﻿package com.swag.swagjobs.listener;
+package com.swag.swagjobs.listener;
 
 import com.swag.swagjobs.SwagJobsPlugin;
 import org.bukkit.Material;
@@ -23,10 +23,9 @@ public class SmelterCapListener implements Listener {
 
         if (!isSmelter(block.getType())) return;
 
-        // Always register the placement (we allow unlimited placement)
         plugin.getSmelterCapManager().registerSmelterBlock(player, block.getLocation(), block.getType());
 
-        // Determine whether this placed block is within their credited cap
+        // First-N-registered policy: blocks placed after the cap is full are not credited for XP.
         boolean credited = plugin.getSmelterCapManager().isAuthorized(player, block);
 
         int remaining = plugin.getSmelterCapManager().getRemainingCapacity(player);
@@ -39,7 +38,6 @@ public class SmelterCapListener implements Listener {
         }
     }
 
-    // Friendly block names
     private String getFriendlyBlockName(Material material) {
         return switch (material) {
             case FURNACE -> "Furnace";
@@ -55,7 +53,6 @@ public class SmelterCapListener implements Listener {
         Block block = event.getBlock();
         if (!isSmelter(block.getType())) return;
 
-        // Unregister by location (remove from DB)
         plugin.getSmelterCapManager().unregisterSmelterBlock(block.getLocation());
     }
 

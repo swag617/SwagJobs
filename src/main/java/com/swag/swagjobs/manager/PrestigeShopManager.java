@@ -1,4 +1,4 @@
-﻿package com.swag.swagjobs.manager;
+package com.swag.swagjobs.manager;
 
 import com.swag.swagjobs.SwagJobsPlugin;
 import com.swag.swagjobs.model.PlayerJobData;
@@ -22,7 +22,7 @@ import java.util.logging.Level;
 
 public class PrestigeShopManager {
 
-    public enum PurchaseResult { SUCCESS, NOT_ENOUGH_POINTS, LIMIT_REACHED }
+    public enum PurchaseResult { SUCCESS, NOT_ENOUGH_POINTS, LIMIT_REACHED, DELIVERY_FAILED }
 
     private static final DateTimeFormatter LOG_FMT = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
 
@@ -34,8 +34,6 @@ public class PrestigeShopManager {
         this.plugin = plugin;
         this.shopFile = new File(plugin.getDataFolder(), "prestige_shop.yml");
     }
-
-    // ---- Load / Save ----
 
     public void load() {
         plugin.saveResource("prestige_shop.yml", false);
@@ -68,8 +66,6 @@ public class PrestigeShopManager {
         }
     }
 
-    // ---- Item access ----
-
     public Collection<PrestigeShopItem> getItems() {
         return items.values().stream()
                 .sorted(Comparator.comparingInt(PrestigeShopItem::getSlot))
@@ -97,17 +93,13 @@ public class PrestigeShopManager {
         save();
     }
 
-    // ---- Purchase logic ----
-
     public PurchaseResult purchase(Player player, PrestigeShopItem item) {
         PlayerJobData data = plugin.getPlayerDataManager().getPlayerData(player.getUniqueId());
 
-        // 1) Check points
         if (data.getJobPoints() < item.getCost()) {
             return PurchaseResult.NOT_ENOUGH_POINTS;
         }
 
-        // 2) Check per-player purchase limit
         if (item.getMaxPurchasesPerPlayer() != -1) {
             int count = plugin.getDatabaseManager().getShopPurchaseCount(player.getUniqueId(), item.getId());
             if (count >= item.getMaxPurchasesPerPlayer()) {
@@ -115,18 +107,21 @@ public class PrestigeShopManager {
             }
         }
 
-        // 3) Deduct points
+        // Attempt delivery before spending points — if it throws, the player keeps their points
+        try {
+            if (item.getType() == PrestigeShopItem.ShopItemType.ITEM) {
+                deliverItem(player, item);
+            } else {
+                deliverCommands(player, item);
+            }
+        } catch (Exception e) {
+            plugin.getLogger().log(Level.WARNING, "Failed to deliver shop item '" + item.getId() + "' to " + player.getName(), e);
+            return PurchaseResult.DELIVERY_FAILED;
+        }
+
         data.spendJobPoints(item.getCost());
         plugin.getDatabaseManager().savePlayerData(data);
 
-        // 4) Deliver reward (must run on main thread — callers from PrestigeShopListener are already on main thread)
-        if (item.getType() == PrestigeShopItem.ShopItemType.ITEM) {
-            deliverItem(player, item);
-        } else {
-            deliverCommands(player, item);
-        }
-
-        // 5) Log & DB
         logPurchase(player, item);
         plugin.getDatabaseManager().insertShopPurchase(
                 player.getUniqueId(), player.getName(), item.getId(), item.getCost(), System.currentTimeMillis());
@@ -135,8 +130,7 @@ public class PrestigeShopManager {
     }
 
     private void deliverItem(Player player, PrestigeShopItem item) {
-        // Use the full stored item data (preserves name, lore, enchants, NBT) if available;
-        // fall back to a bare material stack otherwise.
+        // Fall back to bare material stack if no full item data was stored
         ItemStack stack = (item.getItemData() != null)
                 ? item.getItemData().clone()
                 : new ItemStack(item.getMaterial(), 1);

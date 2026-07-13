@@ -2,8 +2,8 @@
 <project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
   <modelVersion>4.0.0</modelVersion>
   <groupId>com.swag</groupId>
-  <artifactId>fleajobs</artifactId>
-  <name>FleaJobs</name>
+  <artifactId>SwagJobs</artifactId>
+  <name>SwagJobs</name>
   <version>1.0.0</version>
   <description>A comprehensive jobs plugin with XP progression, prestige system, and auto-opt-in mechanics</description>
   <build>
@@ -34,7 +34,7 @@
             <configuration>
               <transformers>
                 <transformer>
-                  <mainClass>com.swag.fleajobs.FleaJobsPlugin</mainClass>
+                  <mainClass>com.swag.swagjobs.SwagJobsPlugin</mainClass>
                 </transformer>
               </transformers>
               <artifactSet>
@@ -52,7 +52,7 @@
         <configuration>
           <archive>
             <manifest>
-              <mainClass>com.swag.fleajobs.FleaJobsPlugin</mainClass>
+              <mainClass>com.swag.swagjobs.SwagJobsPlugin</mainClass>
             </manifest>
           </archive>
         </configuration>
@@ -111,11 +111,11 @@
       </exclusions>
     </dependency>
     <dependency>
-      <groupId>com.pyrofishingpro</groupId>
-      <artifactId>PyroFishingPro</artifactId>
-      <version>4.9.30</version>
+      <groupId>com.SwagDev</groupId>
+      <artifactId>SwagAPI</artifactId>
+      <version>1.0.0</version>
       <scope>system</scope>
-      <systemPath>${project.basedir}/libs/PyroFishingPro-4.9.30.jar</systemPath>
+      <systemPath>${project.basedir}/libs/SwagAPI-1.0.0.jar</systemPath>
     </dependency>
   </dependencies>
   <properties>

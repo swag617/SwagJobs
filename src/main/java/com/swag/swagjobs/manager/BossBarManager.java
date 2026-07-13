@@ -1,4 +1,4 @@
-﻿package com.swag.swagjobs.manager;
+package com.swag.swagjobs.manager;
 
 import com.swag.swagjobs.SwagJobsPlugin;
 import com.swag.swagjobs.model.Job;
@@ -21,7 +21,6 @@ public class BossBarManager {
 
     public BossBarManager(SwagJobsPlugin plugin) {
         this.plugin = plugin;
-        // REMOVED: The periodic refresh task that was forcing the bar to show every 5 seconds.
     }
 
     public void updateBossBar(Player player, Job job, JobProgress progress, double requiredXP) {
@@ -29,17 +28,14 @@ public class BossBarManager {
 
         UUID uuid = player.getUniqueId();
 
-        // Ensure the bar exists and the player is on it
         BossBar bar = activeBars.computeIfAbsent(uuid, k -> createNewBar());
         if (!bar.getPlayers().contains(player)) {
             bar.addPlayer(player);
         }
 
-        // Calculate percentage
         double percentage = requiredXP <= 0 ? 1.0 : Math.min(1.0, progress.getXp() / requiredXP);
         int percentInt = (int) (percentage * 100);
 
-        // Format Title
         String title = plugin.getConfig().getString("boss-bar.title", "&a{job} &7| &fLevel {level} &7| &e{xp}/{xp_required} XP &7({percentage}%)")
                 .replace("{job}", job.getDisplayName())
                 .replace("{level}", String.valueOf(progress.getLevel()))
@@ -51,10 +47,8 @@ public class BossBarManager {
         bar.setTitle(org.bukkit.ChatColor.translateAlternateColorCodes('&', title));
         bar.setProgress(percentage);
 
-        // Force visibility
         bar.setVisible(true);
 
-        // Handle Auto-Hide
         if (hideTasks.containsKey(uuid)) {
             hideTasks.get(uuid).cancel();
         }
@@ -87,9 +81,7 @@ public class BossBarManager {
             return;
         }
 
-        // We create the bar object in memory so it's ready, but we don't call updateBossBar
-        // because updateBossBar sets setVisible(true).
-        // The bar will now only appear when the player actually gains XP.
+        // Prepare the bar object but do not make it visible yet; it will appear on next XP gain
         activeBars.computeIfAbsent(player.getUniqueId(), k -> createNewBar());
     }
 

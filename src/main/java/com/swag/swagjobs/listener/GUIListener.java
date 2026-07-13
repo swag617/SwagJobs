@@ -1,4 +1,4 @@
-﻿package com.swag.swagjobs.listener;
+package com.swag.swagjobs.listener;
 
 import com.swag.swagjobs.SwagJobsPlugin;
 import com.swag.swagjobs.gui.JobProgressGUI;
@@ -17,6 +17,7 @@ import org.bukkit.event.Listener;
 import org.bukkit.event.inventory.InventoryClickEvent;
 import org.bukkit.inventory.Inventory;
 import org.bukkit.inventory.ItemStack;
+import org.bukkit.inventory.meta.ItemMeta;
 
 public class GUIListener implements Listener {
     private final SwagJobsPlugin plugin;
@@ -48,9 +49,10 @@ public class GUIListener implements Listener {
 
         if (!clickedTop) return;
 
-        // --- JOB SELECTION ---
         if (isJobSelection) {
-            String clickedName = ChatColor.stripColor(current.getItemMeta().getDisplayName()).trim();
+            ItemMeta selMeta = current.getItemMeta();
+            if (selMeta == null || !selMeta.hasDisplayName()) return;
+            String clickedName = ChatColor.stripColor(selMeta.getDisplayName()).trim();
             for (Job job : Job.values()) {
                 String jobDisplay = ChatColor.stripColor(ChatColor.translateAlternateColorCodes('&', job.getDisplayName())).trim();
                 if (clickedName.equalsIgnoreCase(jobDisplay)) {
@@ -61,7 +63,6 @@ public class GUIListener implements Listener {
             }
         }
 
-        // --- PROGRESS GUI ---
         if (isProgress) {
             int slot = event.getSlot();
             Job job = extractJobFromTitle(title);
@@ -70,12 +71,9 @@ public class GUIListener implements Listener {
             PlayerJobData data = plugin.getPlayerDataManager().getPlayerData(player.getUniqueId());
             JobProgress progress = data.getJobProgress(job);
 
-            // Bulk Claim (Slot 7) - FIXED: Refresh GUI with fresh data!
             if (slot == 7) {
                 plugin.getPlayerDataManager().claimRewards(player, job);
 
-                // CRITICAL FIX: Run GUI refresh on next tick to ensure data is saved first
-                // and get FRESH playerData from cache
                 int currentPage = extractPageFromTitle(title);
                 Bukkit.getScheduler().runTask(plugin, () -> {
                     new JobProgressGUI(plugin).openPage(player, job, currentPage);
@@ -85,20 +83,17 @@ public class GUIListener implements Listener {
                 return;
             }
 
-            // Prestige (Slot 49)
             if (slot == 49) {
                 plugin.getPrestigeManager().prestige(player, job);
                 player.closeInventory();
                 return;
             }
 
-            // Back Button (Slot 53)
             if (slot == 53) {
                 new JobSelectionGUI(plugin).open(player);
                 return;
             }
 
-            // Pagination
             if (slot == 47) {
                 int page = extractPageFromTitle(title);
                 if (page > 1) new JobProgressGUI(plugin).openPage(player, job, page - 1);
@@ -110,9 +105,10 @@ public class GUIListener implements Listener {
                 return;
             }
 
-            // Individual Level Claim (Slots 10-43)
             if (current.getType() == Material.YELLOW_STAINED_GLASS_PANE) {
-                String name = ChatColor.stripColor(current.getItemMeta().getDisplayName());
+                ItemMeta paneMeta = current.getItemMeta();
+                if (paneMeta == null || !paneMeta.hasDisplayName()) return;
+                String name = ChatColor.stripColor(paneMeta.getDisplayName());
                 try {
                     int level = Integer.parseInt(name.replaceAll("[^0-9]", ""));
                     PlayerJobData playerData = plugin.getPlayerDataManager().getPlayerData(player.getUniqueId());
@@ -128,17 +124,16 @@ public class GUIListener implements Listener {
                             return;
                         }
 
-                        // Attempt to claim in DB
                         boolean dbSuccess = plugin.getDatabaseManager().claimReward(player.getUniqueId(), job.getName(), level, prestige);
 
                         if (dbSuccess) {
                             double amount = plugin.getJobsConfig().getMoneyReward(level, prestige);
 
-                            // Update memory state atomically
                             playerData.markRewardClaimed(job, level, prestige, amount);
 
-                            if (plugin.getEconomy() != null) {
-                                plugin.getEconomy().depositPlayer(player, amount);
+                            // MIGRATED: plugin.getEconomy().depositPlayer(player, amount) replaced by SwagAPI IEconomyService
+                            if (plugin.getEcoService() != null && plugin.getEcoService().isEnabled()) {
+                                plugin.getEcoService().deposit(player, amount);
                             }
 
                             plugin.getDatabaseManager().savePlayerData(playerData);
@@ -150,7 +145,6 @@ public class GUIListener implements Listener {
                         }
                     }
 
-                    // FIXED: Refresh GUI on next tick with fresh data
                     int currentPage = extractPageFromTitle(title);
                     Bukkit.getScheduler().runTask(plugin, () -> {
                         new JobProgressGUI(plugin).openPage(player, job, currentPage);
@@ -170,7 +164,6 @@ public class GUIListener implements Listener {
 
     private int extractPageFromTitle(String title) {
         try {
-            // Title format: "... Progress (Page X/4)"
             String part = title.substring(title.lastIndexOf("Page ") + 5, title.lastIndexOf("/"));
             return Integer.parseInt(part);
         } catch (Exception e) {

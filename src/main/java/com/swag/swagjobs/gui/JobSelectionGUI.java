@@ -1,4 +1,4 @@
-﻿package com.swag.swagjobs.gui;
+package com.swag.swagjobs.gui;
 
 import com.swag.swagjobs.SwagJobsPlugin;
 import com.swag.swagjobs.model.Job;
@@ -28,13 +28,9 @@ public class JobSelectionGUI {
 
         PlayerJobData playerData = plugin.getPlayerDataManager().getPlayerData(player.getUniqueId());
 
-        // Fill borders with glass panes
         fillBorders(inv);
-
-        // Fill inner spacing with lighter purple
         fillInnerSpacing(inv);
 
-        // Shifted down one row: slots 20-24 and 29-33
         int[] jobSlots = {20, 21, 22, 23, 24, 29, 30, 31, 32, 33};
         int jobIndex = 0;
 
@@ -46,7 +42,6 @@ public class JobSelectionGUI {
             }
         }
 
-        // Add info item in bottom right
         inv.setItem(53, createInfoItem());
 
         player.openInventory(inv);
@@ -57,7 +52,6 @@ public class JobSelectionGUI {
         ItemStack magentaPane = createGlassPane("&d");
 
         for (int i = 0; i < 54; i++) {
-            // Fill top row, bottom row, and sides
             if (i < 9 || i >= 45 || i % 9 == 0 || i % 9 == 8) {
                 inv.setItem(i, i % 2 == 0 ? purplePane : magentaPane);
             }
@@ -67,7 +61,6 @@ public class JobSelectionGUI {
     private void fillInnerSpacing(Inventory inv) {
         ItemStack lightPurplePane = createGlassPane("&8");
 
-        // Fill rows 1 and 3 (slots 9-17 and 36-44) with lighter purple
         for (int i = 9; i < 18; i++) {
             if (inv.getItem(i) == null) {
                 inv.setItem(i, lightPurplePane);
@@ -80,7 +73,6 @@ public class JobSelectionGUI {
             }
         }
 
-        // Fill columns around the job grid (slots 18-19, 25-28, 34-35)
         for (int i = 18; i < 36; i++) {
             if (i % 9 == 1 || i % 9 == 2 || i % 9 == 6 || i % 9 == 7) {
                 if (inv.getItem(i) == null) {
@@ -102,7 +94,6 @@ public class JobSelectionGUI {
         ItemStack item = new ItemStack(job.getIcon());
         ItemMeta meta = item.getItemMeta();
 
-        // Translate color codes for the display name
         meta.setDisplayName(color(job.getDisplayName()));
 
         List<String> lore = new ArrayList<>();
@@ -118,7 +109,6 @@ public class JobSelectionGUI {
 
         meta.setLore(lore);
 
-        // Hide attributes to keep it clean
         meta.addItemFlags(ItemFlag.HIDE_ATTRIBUTES);
 
         item.setItemMeta(meta);

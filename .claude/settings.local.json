@@ -1,8 +1,0 @@
-{
-  "permissions": {
-    "allow": [
-      "Bash(robocopy C:\\\\Users\\\\luket\\\\IdeaProjects\\\\FleaJobs:*)",
-      "Bash(powershell.exe:*)"
-    ]
-  }
-}

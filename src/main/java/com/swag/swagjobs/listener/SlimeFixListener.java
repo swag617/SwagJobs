@@ -1,4 +1,4 @@
-﻿package com.swag.swagjobs.listener;
+package com.swag.swagjobs.listener;
 
 import org.bukkit.entity.Slime;
 import org.bukkit.entity.MagmaCube;

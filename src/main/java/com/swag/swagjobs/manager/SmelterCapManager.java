@@ -1,4 +1,4 @@
-﻿package com.swag.swagjobs.manager;
+package com.swag.swagjobs.manager;
 
 import com.swag.swagjobs.SwagJobsPlugin;
 import org.bukkit.Bukkit;
@@ -12,13 +12,11 @@ import java.util.UUID;
 public class SmelterCapManager {
     private final SwagJobsPlugin plugin;
 
-    // Rank-based caps
     private static final int CAP_MEMBER = 10;
     private static final int CAP_AXOLOTL = 15;
     private static final int CAP_LIZARD = 20;
     private static final int CAP_FLEA = 25;
 
-    // Smelter block types
     private static final Material[] SMELTER_BLOCKS = {
             Material.FURNACE,
             Material.BLAST_FURNACE,
@@ -30,9 +28,6 @@ public class SmelterCapManager {
         this.plugin = plugin;
     }
 
-    /**
-     * Get the smelter cap for a player based on their rank
-     */
     public int getCapForPlayer(Player player) {
         if (player.hasPermission("SwagJobs.rank.flea")) {
             return CAP_FLEA;
@@ -45,9 +40,6 @@ public class SmelterCapManager {
         }
     }
 
-    /**
-     * Register a placed smelter block (always register; placement is allowed).
-     */
     public void registerSmelterBlock(Player player, Location location, Material blockType) {
         if (!isSmelterBlock(blockType)) return;
 
@@ -61,9 +53,6 @@ public class SmelterCapManager {
         );
     }
 
-    /**
-     * Unregister a broken smelter block
-     */
     public void unregisterSmelterBlock(Location location) {
         plugin.getDatabaseManager().removeSmelterBlock(
                 location.getWorld().getName(),
@@ -73,9 +62,6 @@ public class SmelterCapManager {
         );
     }
 
-    /**
-     * Check if a material is a smelter block
-     */
     public boolean isSmelterBlock(Material material) {
         for (Material smelter : SMELTER_BLOCKS) {
             if (material == smelter) {
@@ -85,9 +71,6 @@ public class SmelterCapManager {
         return false;
     }
 
-    /**
-     * Get remaining capacity for a player (cap - total placed; min 0)
-     */
     public int getRemainingCapacity(Player player) {
         int cap = getCapForPlayer(player);
         int currentCount = plugin.getDatabaseManager().getSmelterBlockCount(player.getUniqueId());

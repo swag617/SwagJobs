@@ -7,28 +7,43 @@ database:
   file: SwagJobs.db
 
 anticheat:
-  enabled: true
-  sample-size: 20
-  min-variance: 4.0
-  max-actions-per-second: 20.0
-  min-cps: 20.0
-  max-cps: 100.0
-  alert-cooldown-seconds: 6
-  ignore-enchants:
-    - trench
-    - veinminer
-    - auto-smelt
-  ignore-ae-enchants:
-    - trench
-    - veinminer
-    - auto-smelt
+  # Place-break exploit detection (place a tracked block, break it yourself, repeat for free XP).
+  # The macro/CPS-based anti-cheat system (consistency variance, AdvancedEnchantments hook) has
+  # been removed from SwagJobs — that functionality is moving to SwagAC.
+  # NOTE: these keys must live under anticheat: — the code reads anticheat.place-break-* .
+  place-break-max-cycles: 3
+  place-break-timeout-seconds: 120
+  track-exploit-blocks:
+    - MELON_BLOCK
+    - PUMPKIN
+    - MELON
+  # When true, online staff with admin-permission are messaged when a player exceeds the cycle cap.
+  alert-admins: false
+  admin-permission: "SwagJobs.admin.alerts"
+  # Minimum time between repeat admin alerts for the same player, in milliseconds.
+  flag-cooldown-ms: 60000
 
-place-break-max-cycles: 3
-place-break-timeout-seconds: 120
-track-exploit-blocks:
-  - MELON_BLOCK
-  - PUMPKIN
-  - MELON
+# Actionbar ping when an XP gain carries a player across a progress-percentage threshold.
+milestones:
+  enabled: true
+  percentages: [50, 75, 90]
+  message: "&a&l{job} &7| &fYou're &a{percent}% &7to level {next_level}!"
+
+# One-time-per-day job-points bonus, granted on join.
+daily-bonus:
+  enabled: true
+  job-points: 25
+  message: "&a&lDAILY BONUS &8» &7You received &a{points} job points &7for playing today!"
+
+# Console commands to run when a player hits a specific level in a specific job.
+# Fires once, at the moment of level-up, alongside the normal money reward — %player% is replaced
+# with the player's name. Example (uncomment and adjust to use):
+# milestone-rewards:
+#   MINER:
+#     25:
+#       - "give %player% diamond 5"
+#     50:
+#       - "eco give %player% 100"
 
 xp:
   max-level: 100
@@ -611,25 +626,25 @@ jobs:
         stick:
           xp: 0.1
           money: 0.002
-    pyrofishing:
+    swagfishing:
       enabled: true
       custom-fish:
-        bronze:
+        quartz:
           xp: 1.8
           money: 0.037
-        silver:
+        emerald:
           xp: 3.6
           money: 0.075
-        gold:
+        sapphire:
           xp: 9.6
           money: 0.200
-        diamond:
+        ruby:
           xp: 18.0
           money: 0.375
-        platinum:
+        amethyst:
           xp: 48.0
           money: 1.000
-        mythical:
+        prismatic:
           xp: 144.0
           money: 3.000
       use-vanilla-fallback: true

@@ -1,4 +1,4 @@
-﻿package com.swag.swagjobs.manager;
+package com.swag.swagjobs.manager;
 
 import com.swag.swagjobs.SwagJobsPlugin;
 import org.bukkit.Bukkit;
@@ -20,7 +20,6 @@ public class VanishManager {
         UUID uuid = admin.getUniqueId();
 
         if (vanish) {
-            // If they are already vanished in our system, don't run the command again
             if (vanishedAdmins.contains(uuid)) return;
 
             vanishedAdmins.add(uuid);
@@ -30,7 +29,6 @@ public class VanishManager {
             } catch (Exception ignored) {}
 
             if (!executed) {
-                // Fallback if command fails
                 for (Player p : Bukkit.getOnlinePlayers()) {
                     if (!p.hasPermission("SwagJobs.admin")) {
                         p.hidePlayer(plugin, admin);
@@ -38,7 +36,6 @@ public class VanishManager {
                 }
             }
         } else {
-            // If they aren't vanished, don't try to unvanish
             if (!vanishedAdmins.contains(uuid)) return;
 
             vanishedAdmins.remove(uuid);
@@ -48,7 +45,6 @@ public class VanishManager {
             } catch (Exception ignored) {}
 
             if (!executed) {
-                // Fallback if command fails
                 for (Player p : Bukkit.getOnlinePlayers()) {
                     p.showPlayer(plugin, admin);
                 }

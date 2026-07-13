@@ -1,4 +1,4 @@
-﻿package com.swag.swagjobs.listener;
+package com.swag.swagjobs.listener;
 
 import com.swag.swagjobs.SwagJobsPlugin;
 import com.swag.swagjobs.gui.PrestigeShopEditGUI;
@@ -14,18 +14,18 @@ import org.bukkit.event.EventHandler;
 import org.bukkit.event.EventPriority;
 import org.bukkit.event.Listener;
 import org.bukkit.event.inventory.InventoryClickEvent;
-import org.bukkit.event.player.AsyncPlayerChatEvent;
+import io.papermc.paper.event.player.AsyncChatEvent;
+import net.kyori.adventure.text.serializer.plain.PlainTextComponentSerializer;
 import org.bukkit.inventory.ItemStack;
 
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
+import java.util.concurrent.ConcurrentHashMap;
 
 public class PrestigeShopListener implements Listener {
 
-    // ---- Session state machine ----
     enum SessionState { AWAITING_NAME, AWAITING_RARITY, AWAITING_COST, AWAITING_TYPE, AWAITING_COMMANDS, AWAITING_MAX_PURCHASES }
 
     static class ShopEditSession {
@@ -47,15 +47,12 @@ public class PrestigeShopListener implements Listener {
     }
 
     private final SwagJobsPlugin plugin;
-    private final Map<UUID, ShopEditSession> pendingSessions = new HashMap<>();
+    private final Map<UUID, ShopEditSession> pendingSessions = new ConcurrentHashMap<>();
 
     public PrestigeShopListener(SwagJobsPlugin plugin) {
         this.plugin = plugin;
     }
 
-    // =========================================================================
-    // INVENTORY CLICK — shop editor
-    // =========================================================================
     @EventHandler(priority = EventPriority.HIGH, ignoreCancelled = true)
     public void onEditorClick(InventoryClickEvent event) {
         if (!(event.getWhoClicked() instanceof Player player)) return;
@@ -74,14 +71,12 @@ public class PrestigeShopListener implements Listener {
         int slot = event.getSlot();
         PrestigeShopManager manager = plugin.getPrestigeShopManager();
 
-        // Back button
         if (slot == 0) {
             player.closeInventory();
             Bukkit.getScheduler().runTask(plugin, () -> new PrestigeShopGUI(plugin).open(player));
             return;
         }
 
-        // Save & Close button
         if (slot == 8) {
             player.closeInventory();
             return;
@@ -93,14 +88,12 @@ public class PrestigeShopListener implements Listener {
         PrestigeShopItem existing = manager.getItemBySlot(slot);
 
         if (existing != null) {
-            // Left-click → remove
             if (event.isLeftClick()) {
                 manager.removeItem(existing.getId());
                 player.sendMessage("§c[SwagJobs] Item §f" + existing.getId() + "§c removed from shop.");
                 Bukkit.getScheduler().runTask(plugin, () -> new PrestigeShopEditGUI(plugin).open(player));
                 return;
             }
-            // Right-click → edit cost
             if (event.isRightClick()) {
                 ShopEditSession session = new ShopEditSession(slot, existing.getId(), SessionState.AWAITING_COST,
                         PrestigeShopItem.builder(existing.getId())
@@ -121,9 +114,7 @@ public class PrestigeShopListener implements Listener {
                 return;
             }
         } else {
-            // Empty slot → add new item
             if (clicked.getType() == Material.LIME_STAINED_GLASS_PANE) {
-                // Capture the full held item on the main thread (safe here)
                 ItemStack held = player.getInventory().getItemInMainHand();
                 boolean hasItem = held != null && !held.getType().isAir();
                 Material heldMat = hasItem ? held.getType() : Material.PAPER;
@@ -140,9 +131,6 @@ public class PrestigeShopListener implements Listener {
         }
     }
 
-    // =========================================================================
-    // INVENTORY CLICK — player shop
-    // =========================================================================
     @EventHandler(priority = EventPriority.HIGH, ignoreCancelled = true)
     public void onShopClick(InventoryClickEvent event) {
         if (!(event.getWhoClicked() instanceof Player player)) return;
@@ -172,27 +160,25 @@ public class PrestigeShopListener implements Listener {
                     "§cNot enough Job Points! Need §f" + item.getCost() + "§c, you have §f" + playerPoints + "§c.");
             case LIMIT_REACHED -> player.sendMessage(
                     "§cYou've already bought this item the maximum allowed times.");
+            case DELIVERY_FAILED -> player.sendMessage(
+                    "§cPurchase failed — could not deliver the item. Your points were not spent. Contact an admin.");
             case SUCCESS -> {
                 player.sendMessage("§a§lPURCHASED! §7You bought §f"
                         + ChatColor.translateAlternateColorCodes('&', item.getName()) + "§7.");
                 player.playSound(player.getLocation(), Sound.ENTITY_PLAYER_LEVELUP, 1f, 1f);
-                // Reopen with fresh point balance
                 Bukkit.getScheduler().runTask(plugin, () -> new PrestigeShopGUI(plugin).open(player));
             }
         }
     }
 
-    // =========================================================================
-    // ASYNC CHAT — admin editor prompts
-    // =========================================================================
     @EventHandler(priority = EventPriority.LOWEST)
-    public void onAdminChat(AsyncPlayerChatEvent event) {
+    public void onAdminChat(AsyncChatEvent event) {
         Player player = event.getPlayer();
         ShopEditSession session = pendingSessions.get(player.getUniqueId());
         if (session == null) return;
 
         event.setCancelled(true);
-        String input = event.getMessage().trim();
+        String input = PlainTextComponentSerializer.plainText().serialize(event.message()).trim();
 
         if (input.equalsIgnoreCase("cancel")) {
             pendingSessions.remove(player.getUniqueId());
@@ -238,7 +224,6 @@ public class PrestigeShopListener implements Listener {
                 switch (input.toUpperCase()) {
                     case "ITEM" -> {
                         session.builder.type(PrestigeShopItem.ShopItemType.ITEM);
-                        // Store the full captured item so all NBT/meta is preserved on delivery
                         if (session.capturedItem != null) {
                             session.builder.itemData(session.capturedItem);
                         }
@@ -274,7 +259,6 @@ public class PrestigeShopListener implements Listener {
 
                     PrestigeShopItem newItem = session.builder.build();
 
-                    // If editing existing, remove old first
                     if (session.existingId != null) {
                         plugin.getPrestigeShopManager().removeItem(session.existingId);
                     }
@@ -291,8 +275,6 @@ public class PrestigeShopListener implements Listener {
             }
         }
     }
-
-    // ---- Helpers ----
 
     private String generateId(int slot) {
         return "item_slot_" + slot;

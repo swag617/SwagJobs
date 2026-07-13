@@ -1,9 +1,9 @@
-﻿package com.swag.swagjobs.model;
+package com.swag.swagjobs.model;
 
 public class Reward {
     private final Job job;
     private final int level;
-    private final int prestige; // Added
+    private final int prestige;
     private final double money;
     private boolean claimed;
 

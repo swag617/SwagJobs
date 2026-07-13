@@ -1,4 +1,4 @@
-﻿package com.swag.swagjobs.model;
+package com.swag.swagjobs.model;
 
 import java.util.*;
 
@@ -20,13 +20,11 @@ public class PlayerJobData {
         this.unclaimedRewards = new ArrayList<>();
         this.activeJob = null;
 
-        // Initialize all jobs at level 1
         for (Job job : Job.values()) {
             jobProgress.put(job, new JobProgress(job));
         }
     }
 
-    // --- Job points methods ---
     public int getJobPoints() {
         return jobPoints;
     }
@@ -47,7 +45,6 @@ public class PlayerJobData {
         return true;
     }
 
-    // --- Backwards-compat wrappers ---
     @Deprecated
     public int getPrestigePoints() {
         return getJobPoints();
@@ -76,7 +73,14 @@ public class PlayerJobData {
         }
     }
 
-    // ADD THIS NEW METHOD (for prestige-aware reward tracking)
+    /**
+     * Removes all reward entries (claimed or unclaimed) for the given job and prestige level.
+     * Use this during prestige to cleanly purge old prestige rewards from the in-memory list.
+     */
+    public void clearRewardsForPrestige(Job job, int prestige) {
+        unclaimedRewards.removeIf(r -> r.getJob() == job && r.getPrestige() == prestige);
+    }
+
     public List<Reward> getRewards() {
         return Collections.unmodifiableList(unclaimedRewards);
     }
@@ -92,13 +96,10 @@ public class PlayerJobData {
         addReward(new Reward(job, level, prestige, amount, true));
     }
 
-    // ADD THIS METHOD (to reset milestone rewards when prestiging)
     public void resetMilestoneRewards(Job job) {
-        // This is called by PrestigeManager - rewards are already tracked per-prestige
-        // so we don't need to delete anything, just let the GUI re-check
+        // Rewards are tracked per-prestige; the GUI re-checks on next open.
     }
 
-    // Getters
     public UUID getPlayerId() {
         return playerId;
     }
@@ -111,38 +112,25 @@ public class PlayerJobData {
         this.activeJob = job;
     }
 
-    /**
-     * Get progress for a specific job
-     */
     public JobProgress getJobProgress(Job job) {
         return jobProgress.get(job);
     }
 
-    /**
-     * Get all job progress
-     */
     public Map<Job, JobProgress> getAllJobProgress() {
         return Collections.unmodifiableMap(jobProgress);
     }
 
-    /**
-     * Get unclaimed rewards
-     */
     public List<Reward> getUnclaimedRewards() {
         return unclaimedRewards;
     }
 
-    /**
-     * Get unclaimed rewards for a specific job
-     * FIXED: Now filters by CURRENT prestige to avoid mixing old prestige rewards
-     */
+    /** Filters by current prestige so old prestige rewards don't bleed through. */
     public List<Reward> getUnclaimedRewards(Job job) {
         List<Reward> jobRewards = new ArrayList<>();
         JobProgress progress = getJobProgress(job);
         int currentPrestige = progress.getPrestige();
 
         for (Reward reward : unclaimedRewards) {
-            // CRITICAL FIX: Check that reward is for the CURRENT prestige!
             if (reward.getJob() == job &&
                     !reward.isClaimed() &&
                     reward.getPrestige() == currentPrestige) {
@@ -152,11 +140,8 @@ public class PlayerJobData {
         return jobRewards;
     }
 
-    /**
-     * Add an unclaimed reward
-     */
     public void addReward(Reward reward) {
-        // Check if this EXACT reward (Job + Level + Prestige) already exists
+        // Deduplicate by (Job, Level, Prestige) — prevents double-inserting on reload.
         for (Reward existing : unclaimedRewards) {
             if (existing.getJob() == reward.getJob() &&
                     existing.getLevel() == reward.getLevel() &&
@@ -167,9 +152,6 @@ public class PlayerJobData {
         unclaimedRewards.add(reward);
     }
 
-    /**
-     * Claim a reward
-     */
     public boolean claimReward(Job job, int level) {
         for (Reward reward : unclaimedRewards) {
             if (reward.getJob() == job && reward.getLevel() == level && !reward.isClaimed()) {
@@ -180,9 +162,6 @@ public class PlayerJobData {
         return false;
     }
 
-    /**
-     * Get total unclaimed money
-     */
     public double getTotalUnclaimedMoney() {
         double total = 0.0;
         for (Reward reward : unclaimedRewards) {
@@ -193,17 +172,13 @@ public class PlayerJobData {
         return total;
     }
 
-    /**
-     * Get total unclaimed money for a specific job
-     * FIXED: Now filters by CURRENT prestige
-     */
+    /** Filters by current prestige so old prestige rewards don't bleed through. */
     public double getTotalUnclaimedMoney(Job job) {
         double total = 0.0;
         JobProgress progress = getJobProgress(job);
         int currentPrestige = progress.getPrestige();
 
         for (Reward reward : unclaimedRewards) {
-            // CRITICAL FIX: Only count rewards for the CURRENT prestige!
             if (reward.getJob() == job &&
                     !reward.isClaimed() &&
                     reward.getPrestige() == currentPrestige) {

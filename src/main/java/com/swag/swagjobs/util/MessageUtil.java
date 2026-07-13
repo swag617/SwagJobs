@@ -1,4 +1,4 @@
-﻿package com.swag.swagjobs.util;
+package com.swag.swagjobs.util;
 
 import org.bukkit.ChatColor;
 import org.bukkit.entity.Player;

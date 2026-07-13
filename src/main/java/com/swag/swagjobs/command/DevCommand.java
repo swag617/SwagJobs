@@ -1,4 +1,4 @@
-﻿package com.swag.swagjobs.command;
+package com.swag.swagjobs.command;
 
 import com.swag.swagjobs.SwagJobsPlugin;
 import com.swag.swagjobs.model.Job;
@@ -49,7 +49,6 @@ public class DevCommand implements CommandExecutor {
                 case "setlevel" -> handleSetLevel(sender, args);
                 case "addlevel" -> handleAddLevel(sender, args);
                 case "investigate" -> handleInvestigate(sender, args);
-                case "acctest" -> handleAccTest(sender, args);
                 case "smeltercap" -> handleSmelterCap(sender, args);
                 default -> sendUsage(sender);
             }
@@ -329,13 +328,10 @@ public class DevCommand implements CommandExecutor {
         progress.setLevel(level);
         progress.setXp(0);
 
-        // CRITICAL FIX: Ensure rewards exist for all levels up to the new level
-        // This is needed when jumping from level 1 to level 100
         for (int i = 1; i <= level; i++) {
             final int rewardLevel = i;
             final int currentPrestige = progress.getPrestige();
 
-            // Check if reward already exists for this level/prestige
             boolean exists = data.getRewards().stream()
                     .anyMatch(r -> r.getJob() == job &&
                             r.getLevel() == rewardLevel &&
@@ -347,10 +343,8 @@ public class DevCommand implements CommandExecutor {
             }
         }
 
-        // CRITICAL FIX: Remove rewards for levels ABOVE the new level
-        // This handles the case where level is decreased (e.g., 100 -> 50)
         if (level < oldLevel) {
-            data.getRewards().removeIf(r ->
+            data.getUnclaimedRewards().removeIf(r ->
                     r.getJob() == job &&
                             r.getPrestige() == progress.getPrestige() &&
                             r.getLevel() > level
@@ -362,13 +356,10 @@ public class DevCommand implements CommandExecutor {
         String jobDisplayName = ChatColor.translateAlternateColorCodes('&', job.getDisplayName());
         sender.sendMessage("§aSet " + args[1] + "'s " + jobDisplayName + " level to " + level);
 
-        // FIXED: Make variables final for lambda
         Player onlinePlayer = target.getPlayer();
         if (onlinePlayer != null && onlinePlayer.isOnline()) {
             String inventoryTitle = onlinePlayer.getOpenInventory().getTitle();
-            // Check if they have the Job Progress GUI open for THIS job
             if (inventoryTitle.contains(job.getName() + " Progress")) {
-                // Extract page number from title (format: "✦ JobName Progress ✦ (Page X/4)")
                 int currentPage = 1;
                 if (inventoryTitle.contains("Page ")) {
                     try {
@@ -376,13 +367,9 @@ public class DevCommand implements CommandExecutor {
                         currentPage = Integer.parseInt(pageStr);
                     } catch (Exception ignored) {}
                 }
-
-                // Make final copies for lambda
                 final Job finalJob = job;
                 final int finalPage = currentPage;
                 final Player finalPlayer = onlinePlayer;
-
-                // Refresh the GUI to show updated glass panes
                 Bukkit.getScheduler().runTask(plugin, () ->
                         new com.swag.swagjobs.gui.JobProgressGUI(plugin).openPage(finalPlayer, finalJob, finalPage)
                 );
@@ -416,13 +403,10 @@ public class DevCommand implements CommandExecutor {
         String jobDisplayName = ChatColor.translateAlternateColorCodes('&', job.getDisplayName());
         sender.sendMessage("§aAdded " + amount + " levels to " + args[1] + "'s " + jobDisplayName + " (now level " + newLevel + ")");
 
-        // FIXED: Make variables final for lambda
         Player onlinePlayer = target.getPlayer();
         if (onlinePlayer != null && onlinePlayer.isOnline()) {
             String inventoryTitle = onlinePlayer.getOpenInventory().getTitle();
-            // Check if they have the Job Progress GUI open for THIS job
             if (inventoryTitle.contains(job.getName() + " Progress")) {
-                // Extract page number from title
                 int currentPage = 1;
                 if (inventoryTitle.contains("Page ")) {
                     try {
@@ -430,13 +414,9 @@ public class DevCommand implements CommandExecutor {
                         currentPage = Integer.parseInt(pageStr);
                     } catch (Exception ignored) {}
                 }
-
-                // Make final copies for lambda
                 final Job finalJob = job;
                 final int finalPage = currentPage;
                 final Player finalPlayer = onlinePlayer;
-
-                // Refresh the GUI to show updated glass panes
                 Bukkit.getScheduler().runTask(plugin, () ->
                         new com.swag.swagjobs.gui.JobProgressGUI(plugin).openPage(finalPlayer, finalJob, finalPage)
                 );
@@ -468,36 +448,6 @@ public class DevCommand implements CommandExecutor {
         }
     }
 
-    private void handleAccTest(CommandSender sender, String[] args) {
-        if (args.length < 2) {
-            sender.sendMessage("§cUsage: /SwagJobsdev acctest <player>");
-            return;
-        }
-        Player target = Bukkit.getPlayer(args[1]);
-        if (target == null) {
-            sender.sendMessage("§cPlayer not found.");
-            return;
-        }
-
-        plugin.getCheatDetectionManager().testFlag(target);
-        sender.sendMessage("§aTriggered test flag for " + target.getName());
-    }
-
-    /**
-     * NEW: Smelter cap management command.
-     *
-     * Usage:
-     *  /SwagJobsdev smeltercap set <rank> <amount>
-     *  /SwagJobsdev smeltercap get <rank>
-     *  /SwagJobsdev smeltercap reset
-     *
-     * NOTE: This method assumes plugin.getSmelterCapManager() exists and that the manager exposes:
-     *   - void setCapForRank(String rank, int cap)
-     *   - int getCapForRank(String rank)
-     *   - void resetToDefaults()
-     *
-     * If your manager uses different method names, I can adapt this to match your API.
-     */
     private void handleSmelterCap(CommandSender sender, String[] args) {
         if (args.length < 2) {
             sender.sendMessage("§cUsage: /SwagJobsdev smeltercap <set|get|reset> ...");
@@ -508,7 +458,7 @@ public class DevCommand implements CommandExecutor {
         try {
             manager = plugin.getSmelterCapManager();
         } catch (NoSuchMethodError | Exception e) {
-            // plugin might not implement getSmelterCapManager yet
+            // ignored
         }
 
         if (manager == null) {
@@ -533,16 +483,14 @@ public class DevCommand implements CommandExecutor {
                 }
 
                 try {
-                    // Assumes manager has setCapForRank(String,int)
                     manager.getClass().getMethod("setCapForRank", String.class, int.class).invoke(manager, rank, amount);
-                    // optionally persist via JobsConfig or manager persist method if available
                     try {
-                        plugin.getJobsConfig().saveSmelterCaps(); // optional; may not exist
+                        plugin.getJobsConfig().saveSmelterCaps();
                     } catch (Exception ignored) {}
 
                     sender.sendMessage("§aSet smelter cap for rank '" + rank + "' to " + amount);
                 } catch (NoSuchMethodException nsme) {
-                    sender.sendMessage("§cSmelterCapManager.setCapForRank(String,int) not found. Update the manager API or tell me its method names.");
+                    sender.sendMessage("§cSmelterCapManager.setCapForRank(String,int) not found.");
                 } catch (Exception e) {
                     sender.sendMessage("§cFailed to set cap: " + e.getMessage());
                     e.printStackTrace();
@@ -555,12 +503,11 @@ public class DevCommand implements CommandExecutor {
                 }
                 String rank = args[2];
                 try {
-                    // Assumes manager has getCapForRank(String) -> int
                     Object capObj = manager.getClass().getMethod("getCapForRank", String.class).invoke(manager, rank);
                     int cap = capObj instanceof Integer ? (Integer) capObj : Integer.parseInt(capObj.toString());
                     sender.sendMessage("§aSmelter cap for rank '" + rank + "' is " + cap);
                 } catch (NoSuchMethodException nsme) {
-                    sender.sendMessage("§cSmelterCapManager.getCapForRank(String) not found. Update the manager API or tell me its method names.");
+                    sender.sendMessage("§cSmelterCapManager.getCapForRank(String) not found.");
                 } catch (Exception e) {
                     sender.sendMessage("§cFailed to get cap: " + e.getMessage());
                     e.printStackTrace();
@@ -570,11 +517,11 @@ public class DevCommand implements CommandExecutor {
                 try {
                     manager.getClass().getMethod("resetToDefaults").invoke(manager);
                     try {
-                        plugin.getJobsConfig().saveSmelterCaps(); // optional; may not exist
+                        plugin.getJobsConfig().saveSmelterCaps();
                     } catch (Exception ignored) {}
                     sender.sendMessage("§aSmelter caps reset to defaults.");
                 } catch (NoSuchMethodException nsme) {
-                    sender.sendMessage("§cSmelterCapManager.resetToDefaults() not found. Update the manager API or tell me its method names.");
+                    sender.sendMessage("§cSmelterCapManager.resetToDefaults() not found.");
                 } catch (Exception e) {
                     sender.sendMessage("§cFailed to reset caps: " + e.getMessage());
                     e.printStackTrace();
@@ -597,7 +544,6 @@ public class DevCommand implements CommandExecutor {
         sender.sendMessage(" §7/SwagJobsdev setlevel <player> <job> <level>");
         sender.sendMessage(" §7/SwagJobsdev addlevel <player> <job> <amount>");
         sender.sendMessage(" §7/SwagJobsdev investigate <player>");
-        sender.sendMessage(" §7/SwagJobsdev acctest <player>");
         sender.sendMessage(" §7/SwagJobsdev smeltercap set <rank> <amount>");
         sender.sendMessage(" §7/SwagJobsdev smeltercap get <rank>");
         sender.sendMessage(" §7/SwagJobsdev smeltercap reset");

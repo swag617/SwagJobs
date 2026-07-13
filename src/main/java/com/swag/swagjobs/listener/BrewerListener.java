@@ -1,4 +1,4 @@
-﻿package com.swag.swagjobs.listener;
+package com.swag.swagjobs.listener;
 
 import com.swag.swagjobs.SwagJobsPlugin;
 import com.swag.swagjobs.model.Job;
@@ -23,7 +23,6 @@ public class BrewerListener implements Listener {
     public void onBrew(BrewEvent event) {
         Block block = event.getBlock();
 
-        // Get owner UUID from database instead of in-memory map
         UUID owner = plugin.getDatabaseManager().getSmelterOwnerUUID(
                 block.getWorld().getName(),
                 block.getX(),
@@ -36,17 +35,10 @@ public class BrewerListener implements Listener {
         Player player = plugin.getServer().getPlayer(owner);
         if (player == null) return;
 
-        // CAP CHECK: Only award XP if this stand is within their allowed credited cap
-        if (!plugin.getSmelterCapManager().isAuthorized(player, block)) {
-            return;
-        }
+        if (!plugin.getSmelterCapManager().isAuthorized(player, block)) return;
 
-        // Anti-exploit: check place-break cycles for this brewing-stand location
-        if (!plugin.getCheatDetectionManager().canGainXp(player, block.getLocation())) {
-            return;
-        }
+        if (!plugin.getPlaceBreakManager().canGainXp(player, block.getLocation())) return;
 
-        // Count potions brewed (3 slots)
         BrewingStand stand = (BrewingStand) block.getState();
         int potionCount = 0;
 
@@ -58,34 +50,11 @@ public class BrewerListener implements Listener {
         }
 
         String actionKey = "regular_potion";
-
-        // Only continue if this action has XP configured
         if (plugin.getJobsConfig().getActionXP(Job.BREWER, actionKey) <= 0) return;
 
         for (int i = 0; i < potionCount; i++) {
-            // Pass the action KEY (String)
             plugin.getJobManager().processAction(player, Job.BREWER, actionKey);
         }
     }
 
-    // Track who placed the brewing stand using DATABASE instead of HashMap
-    @EventHandler
-    public void onBrewingStandPlace(org.bukkit.event.block.BlockPlaceEvent event) {
-        if (event.getBlock().getType().name().contains("BREWING_STAND")) {
-            // Register with cap manager (will be recorded in DATABASE for credit ordering)
-            plugin.getSmelterCapManager().registerSmelterBlock(
-                    event.getPlayer(),
-                    event.getBlock().getLocation(),
-                    event.getBlock().getType()
-            );
-        }
-    }
-
-    @EventHandler
-    public void onBrewingStandBreak(org.bukkit.event.block.BlockBreakEvent event) {
-        if (event.getBlock().getType().name().contains("BREWING_STAND")) {
-            // Unregister from cap manager / DB
-            plugin.getSmelterCapManager().unregisterSmelterBlock(event.getBlock().getLocation());
-        }
-    }
 }

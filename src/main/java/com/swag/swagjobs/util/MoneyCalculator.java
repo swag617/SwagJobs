@@ -1,9 +1,9 @@
-﻿package com.swag.swagjobs.util;
+package com.swag.swagjobs.util;
 
 import com.swag.swagjobs.SwagJobsPlugin;
 import com.swag.swagjobs.model.JobProgress;
 
-public class MoneyCalculator {
+public class  MoneyCalculator {
     private final SwagJobsPlugin plugin;
 
     public MoneyCalculator(SwagJobsPlugin plugin) {

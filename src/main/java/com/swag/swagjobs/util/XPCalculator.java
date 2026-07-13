@@ -1,4 +1,4 @@
-﻿package com.swag.swagjobs.util;
+package com.swag.swagjobs.util;
 
 import com.swag.swagjobs.SwagJobsPlugin;
 import com.swag.swagjobs.model.Job;

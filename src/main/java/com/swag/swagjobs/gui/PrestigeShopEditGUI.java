@@ -1,4 +1,4 @@
-﻿package com.swag.swagjobs.gui;
+package com.swag.swagjobs.gui;
 
 import com.swag.swagjobs.SwagJobsPlugin;
 import com.swag.swagjobs.model.PrestigeShopItem;
@@ -23,21 +23,18 @@ public class PrestigeShopEditGUI {
     public void open(Player player) {
         Inventory inv = Bukkit.createInventory(null, 54, "§c§l⚙ §4§lShop Editor §c§l⚙");
 
-        // Back button (slot 0)
         ItemStack back = new ItemStack(Material.RED_STAINED_GLASS_PANE);
         ItemMeta backMeta = back.getItemMeta();
         backMeta.setDisplayName("§c§l← Back to Shop");
         back.setItemMeta(backMeta);
         inv.setItem(0, back);
 
-        // Save & Close button (slot 8)
         ItemStack save = new ItemStack(Material.GREEN_STAINED_GLASS_PANE);
         ItemMeta saveMeta = save.getItemMeta();
         saveMeta.setDisplayName("§a§lSave & Close");
         save.setItemMeta(saveMeta);
         inv.setItem(8, save);
 
-        // Place existing shop items with editor lore
         for (PrestigeShopItem shopItem : plugin.getPrestigeShopManager().getItems()) {
             // Show the actual stored item icon when available (ITEM type)
             ItemStack stack;
@@ -74,20 +71,17 @@ public class PrestigeShopEditGUI {
             inv.setItem(shopItem.getSlot(), stack);
         }
 
-        // Empty slots → lime glass pane prompt
         ItemStack empty = new ItemStack(Material.LIME_STAINED_GLASS_PANE);
         ItemMeta emptyMeta = empty.getItemMeta();
         emptyMeta.setDisplayName("§a§lClick to add item");
         empty.setItemMeta(emptyMeta);
 
-        // Fill content area (slots 9-53 excluding 0 and 8)
         for (int i = 9; i < 54; i++) {
             if (inv.getItem(i) == null) {
                 inv.setItem(i, empty);
             }
         }
 
-        // Fill top row gaps (1-7) with filler
         ItemStack filler = new ItemStack(Material.GRAY_STAINED_GLASS_PANE);
         ItemMeta fillerMeta = filler.getItemMeta();
         fillerMeta.setDisplayName(" ");

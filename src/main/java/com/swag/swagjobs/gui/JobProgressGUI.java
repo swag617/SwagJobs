@@ -1,4 +1,4 @@
-﻿package com.swag.swagjobs.gui;
+package com.swag.swagjobs.gui;
 
 import com.swag.swagjobs.SwagJobsPlugin;
 import com.swag.swagjobs.model.Job;
@@ -74,7 +74,6 @@ public class JobProgressGUI {
     }
 
     private ItemStack createLevelPane(Job job, int level, boolean unlocked, JobProgress progress, PlayerJobData playerData) {
-        // Check if reward is claimed for THIS prestige
         boolean claimed = playerData.getRewards().stream()
                 .anyMatch(r -> r.getJob() == job && r.getLevel() == level && r.getPrestige() == progress.getPrestige() && r.isClaimed());
 

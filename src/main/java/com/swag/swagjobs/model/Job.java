@@ -1,4 +1,4 @@
-﻿package com.swag.swagjobs.model;
+package com.swag.swagjobs.model;
 
 import org.bukkit.Material;
 
@@ -17,8 +17,8 @@ public enum Job {
     BREWER("Brewer", "&5&lBrewer", Material.BREWING_STAND, "&7Brew potions to earn XP and money"),
     CRAFTER("Crafter", "&a&lCrafter", Material.CRAFTING_TABLE, "&7Craft items to earn XP and money");
 
-    private final String name; // human friendly name (e.g. "Miner")
-    private final String displayName; // ampersand-coded display string (e.g. "&7&lMiner")
+    private final String name;
+    private final String displayName;
     private final Material icon;
     private final String description;
 

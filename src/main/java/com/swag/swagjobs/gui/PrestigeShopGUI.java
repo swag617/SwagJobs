@@ -1,4 +1,4 @@
-﻿package com.swag.swagjobs.gui;
+package com.swag.swagjobs.gui;
 
 import com.swag.swagjobs.SwagJobsPlugin;
 import com.swag.swagjobs.model.PrestigeShopItem;
@@ -26,7 +26,6 @@ public class PrestigeShopGUI {
 
         int totalJobPoints = plugin.getPlayerDataManager().getTotalJobPoints(player.getUniqueId());
 
-        // Point display (slot 4)
         ItemStack pointsDisplay = new ItemStack(Material.AMETHYST_SHARD);
         ItemMeta pointsMeta = pointsDisplay.getItemMeta();
         pointsMeta.setDisplayName("§d§l✦ §5§lYour Job Points §d§l✦");
@@ -39,12 +38,10 @@ public class PrestigeShopGUI {
         pointsDisplay.setItemMeta(pointsMeta);
         inv.setItem(4, pointsDisplay);
 
-        // Data-driven shop items
         for (PrestigeShopItem shopItem : plugin.getPrestigeShopManager().getItems()) {
             inv.setItem(shopItem.getSlot(), buildItemStack(player, shopItem));
         }
 
-        // Decorative border
         ItemStack border = new ItemStack(Material.PURPLE_STAINED_GLASS_PANE);
         ItemMeta borderMeta = border.getItemMeta();
         borderMeta.setDisplayName("§d§l✦");
@@ -64,7 +61,6 @@ public class PrestigeShopGUI {
             inv.setItem(i + 8, border);
         }
 
-        // Filler
         ItemStack filler = new ItemStack(Material.LIGHT_GRAY_STAINED_GLASS_PANE);
         ItemMeta fillerMeta = filler.getItemMeta();
         fillerMeta.setDisplayName(" ");
@@ -94,7 +90,6 @@ public class PrestigeShopGUI {
 
         List<String> lore = new ArrayList<>();
 
-        // Rarity line at the top
         String rarityLine = PrestigeShopItem.getRarityLoreLine(shopItem.getRarity());
         if (rarityLine != null) {
             lore.add(rarityLine);
@@ -112,7 +107,6 @@ public class PrestigeShopGUI {
             lore.add("§7Purchased: §f" + bought + "§7/§f" + shopItem.getMaxPurchasesPerPlayer());
         }
 
-        // Show commands for COMMAND-type items
         if (shopItem.getType() == PrestigeShopItem.ShopItemType.COMMAND
                 && shopItem.getCommands() != null && !shopItem.getCommands().isEmpty()) {
             lore.add("");

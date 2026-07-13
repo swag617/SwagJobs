@@ -1,4 +1,4 @@
-﻿package com.swag.swagjobs.config;
+package com.swag.swagjobs.config;
 
 import com.swag.swagjobs.SwagJobsPlugin;
 import com.swag.swagjobs.model.Job;
@@ -23,7 +23,6 @@ public class JobsConfig {
     private double prestigeMoneyPerPrestige;
 
     private final Map<Job, Double> jobBaseXP = new HashMap<>();
-    // New map for smelter caps
     private final Map<String, Integer> smelterCaps = new HashMap<>();
 
     public JobsConfig(SwagJobsPlugin plugin) {
@@ -50,14 +49,12 @@ public class JobsConfig {
             jobBaseXP.put(job, baseXP);
         }
 
-        // Load Smelter Caps
         loadSmelterCaps();
     }
 
     private void loadSmelterCaps() {
         smelterCaps.clear();
         FileConfiguration config = plugin.getConfig();
-        // We'll use 'rank-caps' to distinguish from 'rank-multipliers'
         if (!config.contains("rank-caps")) {
             config.set("rank-caps.member", 10);
             config.set("rank-caps.axolotl", 15);
@@ -97,48 +94,35 @@ public class JobsConfig {
         return getSmelterCap("member");
     }
 
-    // --- Existing Methods ---
-
-    /**
-     * Get XP for a specific job action
-     * FIXED: Now checks vanilla-fishing path for Fisher job
-     */
     public double getActionXP(Job job, String action) {
         if (action == null) return 0.0;
         String key = action.toLowerCase().replace(" ", "_").replace("-", "_");
 
-        // 1. Check explicit config first: jobs.{job}.actions.{key}.xp
         String path = "jobs." + job.getKey().toLowerCase() + ".actions." + key + ".xp";
         if (plugin.getConfig().contains(path)) {
             return plugin.getConfig().getDouble(path);
         }
 
-        // 2. Fisher-specific config paths
         if (job == Job.FISHER) {
-            // Check PyroFishing custom fish: jobs.fisher.pyrofishing.custom-fish.{key}.xp
-            String pyroPath = "jobs.fisher.pyrofishing.custom-fish." + key + ".xp";
-            if (plugin.getConfig().contains(pyroPath)) {
-                return plugin.getConfig().getDouble(pyroPath);
+            String swagFishingPath = "jobs.fisher.swagfishing.custom-fish." + key + ".xp";
+            if (plugin.getConfig().contains(swagFishingPath)) {
+                return plugin.getConfig().getDouble(swagFishingPath);
             }
 
-            // Check vanilla fishing: jobs.fisher.vanilla-fishing.fish.{key}.xp
             String vanillaPath = "jobs.fisher.vanilla-fishing.fish." + key + ".xp";
             if (plugin.getConfig().contains(vanillaPath)) {
                 return plugin.getConfig().getDouble(vanillaPath);
             }
 
-            // Fallback to fisher default-xp if configured
             double defaultXp = plugin.getConfig().getDouble("jobs.fisher.default-xp", 0.0);
             if (defaultXp > 0.0) {
                 return defaultXp;
             }
         }
 
-        // 3. Universal job-level default-xp fallback (works for ALL jobs including FARMER, BREWER, etc.)
         double defaultXp = plugin.getConfig().getDouble("jobs." + job.getKey() + ".default-xp", 0.0);
         if (defaultXp > 0.0) return defaultXp;
 
-        // 4. Fallback to hardcoded tiers for block/mob jobs
         return switch (job) {
             case MINER, LUMBERJACK, BUILDER -> getBlockTierXP(key);
             case HUNTER -> getMobTierXP(key);
@@ -146,42 +130,32 @@ public class JobsConfig {
         };
     }
 
-    /**
-     * Get Money for a specific job action
-     * FIXED: Now checks vanilla-fishing path for Fisher job
-     */
     public double getActionMoney(Job job, String action) {
         if (action == null) return 0.0;
         String key = action.toLowerCase().replace(" ", "_").replace("-", "_");
 
-        // 1. Check explicit config first: jobs.{job}.actions.{key}.money
         String path = "jobs." + job.getKey().toLowerCase() + ".actions." + key + ".money";
         if (plugin.getConfig().contains(path)) {
             return plugin.getConfig().getDouble(path);
         }
 
-        // 2. Fisher-specific config paths
         if (job == Job.FISHER) {
-            // Check PyroFishing custom fish: jobs.fisher.pyrofishing.custom-fish.{key}.money
-            String pyroPath = "jobs.fisher.pyrofishing.custom-fish." + key + ".money";
-            if (plugin.getConfig().contains(pyroPath)) {
-                return plugin.getConfig().getDouble(pyroPath);
+            String swagFishingPath = "jobs.fisher.swagfishing.custom-fish." + key + ".money";
+            if (plugin.getConfig().contains(swagFishingPath)) {
+                return plugin.getConfig().getDouble(swagFishingPath);
             }
 
-            // Check vanilla fishing: jobs.fisher.vanilla-fishing.fish.{key}.money
             String vanillaPath = "jobs.fisher.vanilla-fishing.fish." + key + ".money";
             if (plugin.getConfig().contains(vanillaPath)) {
                 return plugin.getConfig().getDouble(vanillaPath);
             }
 
-            // Fallback to fisher default-money if configured
             double defaultMoney = plugin.getConfig().getDouble("jobs.fisher.default-money", 0.0);
             if (defaultMoney > 0.0) {
                 return defaultMoney;
             }
         }
 
-        // 3. Fallback to hardcoded tiers for block/mob jobs
         return switch (job) {
             case MINER, LUMBERJACK, BUILDER -> getBlockMoneyTier(key);
             case HUNTER -> getMobMoneyTier(key);
@@ -193,21 +167,13 @@ public class JobsConfig {
         String n = materialName.toUpperCase();
         Material mat = Material.getMaterial(n);
         if (mat != null && !mat.isBlock()) return 2.05;
-        // Tier 1: Soft/common
         if (n.contains("DIRT") || n.contains("SAND") || n.contains("GRAVEL") || n.contains("NETHERRACK")) return 1.03;
-        // Tier 3: Deep/hard stone
         if (n.contains("DEEPSLATE") || n.contains("TUFF") || n.contains("END_STONE")) return 3.07;
-        // Tier 4: Coal / Copper
         if (n.contains("COAL") || n.contains("COPPER")) return 7.69;
-        // Tier 5: Iron / Gold
         if (n.contains("IRON") || n.contains("GOLD")) return 10.25;
-        // Tier 6: Lapis / Redstone / Quartz
         if (n.contains("LAPIS") || n.contains("REDSTONE") || n.contains("QUARTZ")) return 12.81;
-        // Tier 7: Diamond / Emerald
         if (n.contains("DIAMOND") || n.contains("EMERALD")) return 15.38;
-        // Tier 8: Obsidian / Ancient Debris
         if (n.contains("OBSIDIAN") || n.contains("ANCIENT_DEBRIS")) return 20.50;
-        // Tier 2: Generic stone-like (GRANITE, ANDESITE, DIORITE, TERRACOTTA, BASALT, CALCITE, etc.)
         return 2.05;
     }
 
@@ -215,21 +181,13 @@ public class JobsConfig {
         String n = materialName.toUpperCase();
         Material mat = Material.getMaterial(n);
         if (mat != null && !mat.isBlock()) return 0.010;
-        // Tier 1: Soft/common
         if (n.contains("DIRT") || n.contains("SAND") || n.contains("GRAVEL") || n.contains("NETHERRACK")) return 0.005;
-        // Tier 3: Deep/hard stone
         if (n.contains("DEEPSLATE") || n.contains("TUFF") || n.contains("END_STONE")) return 0.015;
-        // Tier 4: Coal / Copper
         if (n.contains("COAL") || n.contains("COPPER")) return 0.037;
-        // Tier 5: Iron / Gold
         if (n.contains("IRON") || n.contains("GOLD")) return 0.050;
-        // Tier 6: Lapis / Redstone / Quartz
         if (n.contains("LAPIS") || n.contains("REDSTONE") || n.contains("QUARTZ")) return 0.063;
-        // Tier 7: Diamond / Emerald
         if (n.contains("DIAMOND") || n.contains("EMERALD")) return 0.075;
-        // Tier 8: Obsidian / Ancient Debris
         if (n.contains("OBSIDIAN") || n.contains("ANCIENT_DEBRIS")) return 0.100;
-        // Tier 2: Generic stone-like (default)
         return 0.010;
     }
 
@@ -278,7 +236,6 @@ public class JobsConfig {
 
     public double getBaseXPForJob(Job job) { return jobBaseXP.getOrDefault(job, baseXPPerLevel); }
 
-    // This is your existing XP Multiplier (e.g. 1.1x)
     public double getRankMultiplier(String rank) { return plugin.getConfig().getDouble("rank-multipliers." + rank.toLowerCase(), 1.0); }
 
     public double getRankXPMultiplier(Player player) {

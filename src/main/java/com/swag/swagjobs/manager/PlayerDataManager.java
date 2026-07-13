@@ -1,17 +1,18 @@
-﻿package com.swag.swagjobs.manager;
+package com.swag.swagjobs.manager;
 
 import com.swag.swagjobs.SwagJobsPlugin;
 import com.swag.swagjobs.model.Job;
 import com.swag.swagjobs.model.JobProgress;
 import com.swag.swagjobs.model.PlayerJobData;
 import com.swag.swagjobs.model.Reward;
-import net.milkbowl.vault.economy.Economy;
+// MIGRATED: net.milkbowl.vault.economy.Economy replaced by SwagAPI IEconomyService
+// import net.milkbowl.vault.economy.Economy;
 import org.bukkit.entity.Player;
 
-import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
 import java.util.List;
+import java.util.concurrent.ConcurrentHashMap;
 
 public class PlayerDataManager {
     private final SwagJobsPlugin plugin;
@@ -19,7 +20,7 @@ public class PlayerDataManager {
 
     public PlayerDataManager(SwagJobsPlugin plugin) {
         this.plugin = plugin;
-        this.cachedData = new HashMap<>();
+        this.cachedData = new ConcurrentHashMap<>();
     }
 
     public void loadPlayer(Player player) {
@@ -41,14 +42,12 @@ public class PlayerDataManager {
                 data = new PlayerJobData(id);
             }
 
-            // REPAIR LOGIC: Ensure every reached level has a reward object
             for (Job job : Job.values()) {
                 JobProgress progress = data.getJobProgress(job);
                 for (int i = 1; i <= progress.getLevel(); i++) {
                     final int level = i;
                     final int prestige = progress.getPrestige();
 
-                    // Check if a reward already exists for this level/prestige
                     boolean exists = data.getRewards().stream()
                             .anyMatch(r -> r.getJob() == job && r.getLevel() == level && r.getPrestige() == prestige);
 
@@ -64,10 +63,9 @@ public class PlayerDataManager {
 
     public void saveAll() {
         plugin.getLogger().info("SwagJobs: Saving all player data (" + cachedData.size() + " cached entries)");
-        // Save cached players first
         for (PlayerJobData data : cachedData.values()) {
             try {
-                plugin.getDatabaseManager().savePlayerData(data); // must be synchronous
+                plugin.getDatabaseManager().savePlayerData(data);
                 plugin.getLogger().info("Saved data for " + data.getPlayerId());
             } catch (Exception e) {
                 plugin.getLogger().severe("Failed to save player data for " + data.getPlayerId() + ": " + e.getMessage());
@@ -75,7 +73,6 @@ public class PlayerDataManager {
             }
         }
 
-        // Extra safety: ensure any online player is saved (in case cache missed someone)
         for (org.bukkit.entity.Player p : plugin.getServer().getOnlinePlayers()) {
             UUID uuid = p.getUniqueId();
             if (!cachedData.containsKey(uuid)) {
@@ -95,11 +92,6 @@ public class PlayerDataManager {
         }
     }
 
-    /**
-     * Claim all unclaimed rewards for the given job and deposit them.
-     * This method now checks for reward objects (not only total money),
-     * deposits each reward, marks them claimed, and saves the player data.
-     */
     public void claimRewards(Player player, Job job) {
         PlayerJobData data = getPlayerData(player.getUniqueId());
         if (data == null) {
@@ -107,7 +99,6 @@ public class PlayerDataManager {
             return;
         }
 
-        // Get the unclaimed rewards for this job
         var rewards = data.getUnclaimedRewards(job);
 
         if (rewards.isEmpty()) {
@@ -115,34 +106,30 @@ public class PlayerDataManager {
             return;
         }
 
-        Economy economy = plugin.getEconomy();
+        // MIGRATED: net.milkbowl.vault.economy.Economy replaced by SwagAPI IEconomyService
+        com.SwagDev.SwagAPI.api.IEconomyService economy = plugin.getEcoService();
+        boolean economyUsable = economy != null && economy.isEnabled();
         double total = 0.0;
         int claimedCount = 0;
 
-        // Mark each reward as claimed (in-memory) and sum money
-        synchronized (data) {
-            for (Reward r : rewards) {
-                if (r.isClaimed()) continue;
-                total += r.getMoney();
-                r.claim();
-                claimedCount++;
-            }
-
-            // Persist the changed reward states to DB even if economy is missing
-            plugin.getDatabaseManager().savePlayerData(data);
+        for (Reward r : rewards) {
+            if (r.isClaimed()) continue;
+            total += r.getMoney();
+            r.claim();
+            claimedCount++;
         }
 
-        // Try to deposit money if economy is available
-        if (economy != null && total > 0.0) {
+        plugin.getDatabaseManager().savePlayerData(data);
+
+        if (economyUsable && total > 0.0) {
             try {
-                economy.depositPlayer(player, total);
+                economy.deposit(player, total);
             } catch (Exception e) {
                 plugin.getLogger().warning("Failed to deposit claimed rewards for " + player.getName() + ": " + e.getMessage());
                 player.sendMessage("§cFailed to deposit rewards due to an economy error. They have been marked as claimed.");
                 return;
             }
-        } else if (economy == null && total > 0.0) {
-            // Economy not hooked – still mark claimed, but inform the player
+        } else if (!economyUsable && total > 0.0) {
             player.sendMessage("§eEconomy not hooked – rewards were marked claimed but not paid out. Contact an admin.");
         }
 
@@ -160,13 +147,9 @@ public class PlayerDataManager {
         JobProgress progress = data.getJobProgress(job);
         data.addReward(new Reward(job, progress.getLevel(), progress.getPrestige(), money));
 
-        // Save immediately to persist reward
         plugin.getDatabaseManager().savePlayerData(data);
     }
 
-    // ====
-    // Job Points (Restored from old file)
-    // ====
     public int getTotalJobPoints(UUID uuid) {
         PlayerJobData data = getPlayerData(uuid);
         return data.getJobPoints();
@@ -200,5 +183,28 @@ public class PlayerDataManager {
     @Deprecated
     public void addPrestigePoints(UUID uuid, int amount) {
         addJobPoints(uuid, amount);
+    }
+
+    /**
+     * Grants the configured daily job-points bonus the first time this is called for a
+     * player on a given calendar day (tracked in the player_daily_bonus table). Safe to
+     * call on every join — it's a no-op if the player already claimed today's bonus.
+     */
+    public void tryGrantDailyBonus(Player player) {
+        if (!plugin.getConfig().getBoolean("daily-bonus.enabled", true)) return;
+
+        UUID uuid = player.getUniqueId();
+        if (!plugin.getDatabaseManager().tryClaimDailyBonus(uuid)) return;
+
+        int points = plugin.getConfig().getInt("daily-bonus.job-points", 25);
+        if (points <= 0) return;
+
+        addJobPoints(uuid, points);
+
+        String message = plugin.getConfig().getString("daily-bonus.message",
+                "&a&lDAILY BONUS &8» &7You received &a{points} job points &7for playing today!");
+        message = org.bukkit.ChatColor.translateAlternateColorCodes('&',
+                message.replace("{points}", String.valueOf(points)));
+        player.sendMessage(message);
     }
 }

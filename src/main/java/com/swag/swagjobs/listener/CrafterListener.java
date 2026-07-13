@@ -1,7 +1,8 @@
-﻿package com.swag.swagjobs.listener;
+package com.swag.swagjobs.listener;
 
 import com.swag.swagjobs.SwagJobsPlugin;
 import com.swag.swagjobs.model.Job;
+import org.bukkit.Material;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.EventPriority;
@@ -23,24 +24,33 @@ public class CrafterListener implements Listener {
         ItemStack result = event.getRecipe().getResult();
         String actionKey = result.getType().name();
 
-        // Only continue if the action has XP configured
         if (plugin.getJobsConfig().getActionXP(Job.CRAFTER, actionKey) <= 0) return;
 
-        // Per-item crafting: Award XP for each item crafted
         int amount = result.getAmount();
         if (event.isShiftClick()) {
-            // Simplified: assume recipe result amount (you can improve this later)
             amount = calculateMaxCraft(event);
         }
 
         for (int i = 0; i < amount; i++) {
-            // Pass the action KEY (String), not the double XP
             plugin.getJobManager().processAction(player, Job.CRAFTER, actionKey);
         }
     }
 
     private int calculateMaxCraft(CraftItemEvent event) {
-        // Simplified: return the result amount
-        return event.getRecipe().getResult().getAmount();
+        if (event.getAction() != org.bukkit.event.inventory.InventoryAction.MOVE_TO_OTHER_INVENTORY) {
+            return event.getRecipe().getResult().getAmount();
+        }
+        // For shift-click, find the minimum ingredient stack size to determine
+        // how many times the recipe completes
+        org.bukkit.inventory.CraftingInventory inv = event.getInventory();
+        int minIngredient = Integer.MAX_VALUE;
+        for (int i = 1; i < inv.getSize(); i++) {
+            ItemStack ingredient = inv.getItem(i);
+            if (ingredient != null && ingredient.getType() != Material.AIR) {
+                minIngredient = Math.min(minIngredient, ingredient.getAmount());
+            }
+        }
+        if (minIngredient == Integer.MAX_VALUE) minIngredient = 1;
+        return minIngredient * event.getRecipe().getResult().getAmount();
     }
 }

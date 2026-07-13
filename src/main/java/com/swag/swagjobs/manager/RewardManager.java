@@ -1,4 +1,4 @@
-﻿package com.swag.swagjobs.manager;
+package com.swag.swagjobs.manager;
 
 public class RewardManager {
 }

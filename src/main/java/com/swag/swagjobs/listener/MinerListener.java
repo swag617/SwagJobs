@@ -1,4 +1,4 @@
-﻿package com.swag.swagjobs.listener;
+package com.swag.swagjobs.listener;
 
 import com.swag.swagjobs.SwagJobsPlugin;
 import com.swag.swagjobs.model.Job;
@@ -22,7 +22,6 @@ public class MinerListener implements Listener {
         Block block = event.getBlock();
         Material type = block.getType();
 
-        // STRICT CHECK: Only trigger for mining-related blocks
         String name = type.name();
         boolean isMiningBlock = name.contains("ORE") || name.contains("STONE") ||
                 name.contains("DEEPSLATE") || name.contains("NETHERRACK") ||
@@ -39,15 +38,12 @@ public class MinerListener implements Listener {
         if (block.hasMetadata("placed")) return;
 
         Player player = event.getPlayer();
-        String actionKey = type.name(); // Pass the Material name as the action key
+        String actionKey = type.name();
 
-        // Only continue if the action has XP configured
         if (plugin.getJobsConfig().getActionXP(Job.MINER, actionKey) <= 0) return;
 
-        // Anti-exploit: check place-break cycles before awarding XP
-        if (!plugin.getCheatDetectionManager().canGainXp(player, block.getLocation())) return;
+        if (!plugin.getPlaceBreakManager().canGainXp(player, block.getLocation())) return;
 
-        // Pass the action KEY (String) to JobManager
         plugin.getJobManager().processAction(player, Job.MINER, actionKey);
     }
 }

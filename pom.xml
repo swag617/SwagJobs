@@ -70,13 +70,14 @@
             <version>3.44.0.0</version>
         </dependency>
 
-        <!-- PyroFishingPro (Local JAR) -->
+        <!-- SwagAPI (Local JAR) — shared services: database, economy, player data, event bus.
+             system scope, NOT shaded into this jar; SwagAPI runs as its own plugin on the server. -->
         <dependency>
-            <groupId>com.pyrofishingpro</groupId>
-            <artifactId>PyroFishingPro</artifactId>
-            <version>4.9.30</version>
+            <groupId>com.SwagDev</groupId>
+            <artifactId>SwagAPI</artifactId>
+            <version>1.0.0</version>
             <scope>system</scope>
-            <systemPath>${project.basedir}/libs/PyroFishingPro-4.9.30.jar</systemPath>
+            <systemPath>${project.basedir}/libs/SwagAPI-1.0.0.jar</systemPath>
         </dependency>
 
         <!-- Lombok (optional, for reducing boilerplate) -->

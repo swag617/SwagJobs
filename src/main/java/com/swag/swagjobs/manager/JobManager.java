@@ -1,4 +1,4 @@
-﻿package com.swag.swagjobs.manager;
+package com.swag.swagjobs.manager;
 
 import com.swag.swagjobs.SwagJobsPlugin;
 import com.swag.swagjobs.model.Job;
@@ -12,8 +12,10 @@ import org.bukkit.Particle;
 import org.bukkit.entity.Player;
 
 import java.text.DecimalFormat;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
@@ -22,30 +24,20 @@ public class JobManager {
     private final SwagJobsPlugin plugin;
     private final DecimalFormat moneyFormat = new DecimalFormat("#,##0.00");
 
-    // ====================================================================
-    // FIX: Streak is now tracked PER-PLAYER PER-JOB instead of per-player.
-    // Key format: "UUID:JOB_NAME" (e.g. "abc-123:LUMBERJACK")
-    // This prevents a streak built in one job from applying to other jobs.
-    // ====================================================================
+    // Streak key format: "UUID:JOB_NAME" — tracked per-player per-job so streaks don't bleed across jobs
     private final Map<String, Integer> playerStreaks = new HashMap<>();
     private final Map<String, Long> lastActionTime = new HashMap<>();
     private static final long STREAK_TIMEOUT = 5000;
 
-    // Streak scaling: logarithmic diminishing returns
-    // Streak 100 = 2.0x, 250 = 2.5x, 500 = 3.0x, 1000 = 3.5x, 2000 = 4.0x (hard cap)
     private static final int MAX_STREAK = 2000;
     private static final double MAX_STREAK_MULTIPLIER = 4.0;
 
-    // Debug toggle per-player (resets on restart)
     private final Set<UUID> debugPlayers = new HashSet<>();
 
     public JobManager(SwagJobsPlugin plugin) {
         this.plugin = plugin;
     }
 
-    /**
-     * Build a composite key for per-player-per-job streak tracking.
-     */
     private String streakKey(UUID uuid, Job job) {
         return uuid.toString() + ":" + job.name();
     }
@@ -75,7 +67,6 @@ public class JobManager {
     }
 
     public void processAction(Player player, Job job, String actionName) {
-        plugin.getCheatDetectionManager().recordAction(player);
         updateStreak(player, job);
 
         double baseXP = plugin.getJobsConfig().getActionXP(job, actionName);
@@ -120,21 +111,15 @@ public class JobManager {
         int streak = playerStreaks.getOrDefault(key, 0);
         if (streak <= 0) return 1.0;
 
-        // Clamp to max streak
         int clampedStreak = Math.min(streak, MAX_STREAK);
 
-        // Power curve: rises fast at first, then flattens out
         // Exponent 0.3667 calibrated so streak=100 gives exactly 2.0x
         double progress = Math.pow((double) clampedStreak / MAX_STREAK, 0.3667);
         double mult = 1.0 + (MAX_STREAK_MULTIPLIER - 1.0) * progress;
 
-        // Round to 1 decimal for clean display
         return Math.round(mult * 10.0) / 10.0;
     }
 
-    /**
-     * Get the current streak count for a specific player+job.
-     */
     public int getStreak(Player player, Job job) {
         String key = streakKey(player.getUniqueId(), job);
         return playerStreaks.getOrDefault(key, 0);
@@ -158,16 +143,13 @@ public class JobManager {
         JobProgress progress = data.getJobProgress(job);
         if (progress.getLevel() >= plugin.getJobsConfig().getMaxLevel()) return;
 
-        // Normalize action key for logging/fallback lookups
         String normalizedAction = actionName == null ? "" : actionName.toLowerCase().replace(" ", "_").replace("-", "_");
 
-        // If the config didn't provide XP for this action, try job-level default, then global default
         if (baseXP <= 0.0) {
             String xpPath = "jobs." + job.name().toLowerCase() + ".default-xp";
             baseXP = plugin.getConfig().getDouble(xpPath, plugin.getConfig().getDouble("jobs.default-xp", 0.05));
         }
 
-        // XP: apply multipliers and add
         double xpMult = getXPMultiplier(player, progress.getPrestige());
         double finalXP = baseXP * xpMult;
         progress.setXp(progress.getXp() + finalXP);
@@ -182,14 +164,12 @@ public class JobManager {
             }
         }
 
-        // Money (apply prestige/streak multipliers) - now per-job streak!
         double moneyMult = getMoneyMultiplier(player, job, progress.getPrestige());
         double rawFinalMoney = baseMoney * moneyMult;
 
         // Round to 2 decimals so tiny values are visible/consistent
         double finalMoney = Math.round(rawFinalMoney * 100.0) / 100.0;
 
-        // Debug (only when player toggles debug)
         if (isDebugging(player)) {
             double rankMult = plugin.getJobsConfig().getRankXPMultiplier(player);
             double prestigeXpMult = 1.0 + (progress.getPrestige() * plugin.getJobsConfig().getPrestigeXPMultiplier());
@@ -209,16 +189,15 @@ public class JobManager {
             player.sendMessage(" ");
         }
 
-        // Deposit (only if economy hooked)
-        if (plugin.getEconomy() != null && finalMoney > 0.0) {
+        // MIGRATED: plugin.getEconomy().depositPlayer(player, finalMoney) replaced by SwagAPI IEconomyService
+        if (plugin.getEcoService() != null && plugin.getEcoService().isEnabled() && finalMoney > 0.0) {
             try {
-                plugin.getEconomy().depositPlayer(player, finalMoney);
+                plugin.getEcoService().deposit(player, finalMoney);
             } catch (Exception e) {
                 plugin.getLogger().warning("Failed to deposit money for " + player.getName() + ": " + e.getMessage());
             }
         }
 
-        // Always show action-bar so players always see streak/multiplier info
         {
             int streak = getStreak(player, job);
             double sMult = getStreakMultiplier(player, job);
@@ -228,8 +207,11 @@ public class JobManager {
             player.spigot().sendMessage(ChatMessageType.ACTION_BAR, new TextComponent(message));
         }
 
-        // Level up check and bossbar update
         double requiredXP = plugin.getJobsConfig().getXpRequired(job, progress.getLevel(), progress.getPrestige());
+
+        double prevXp = progress.getXp() - finalXP;
+        checkMilestonePing(player, job, progress.getLevel(), prevXp, progress.getXp(), requiredXP);
+
         if (progress.getXp() >= requiredXP) {
             levelUp(player, job, progress);
             // recompute requiredXP for the new level
@@ -239,17 +221,80 @@ public class JobManager {
         plugin.getBossBarManager().updateBossBar(player, job, progress, requiredXP);
     }
 
+    /**
+     * Sends an actionbar ping the moment this XP gain carries the player across a configured
+     * progress-percentage threshold (e.g. 50/75/90%) toward their next level. Naturally fires
+     * once per threshold per level since XP only rises monotonically within a level.
+     */
+    private void checkMilestonePing(Player player, Job job, int level, double prevXp, double newXp, double requiredXp) {
+        if (!plugin.getConfig().getBoolean("milestones.enabled", true)) return;
+        if (requiredXp <= 0 || newXp >= requiredXp) return; // level-up message covers reaching 100%
+
+        List<Integer> percentages = plugin.getConfig().getIntegerList("milestones.percentages");
+        if (percentages.isEmpty()) percentages = Arrays.asList(50, 75, 90);
+
+        double prevPercent = Math.max(0.0, prevXp / requiredXp * 100.0);
+        double newPercent = newXp / requiredXp * 100.0;
+
+        int highestCrossed = -1;
+        for (int pct : percentages) {
+            if (prevPercent < pct && newPercent >= pct) {
+                highestCrossed = Math.max(highestCrossed, pct);
+            }
+        }
+        if (highestCrossed < 0) return;
+
+        String template = plugin.getConfig().getString("milestones.message",
+                "&a&l{job} &7| &fYou're &a{percent}% &7to level {next_level}!");
+        String message = ChatColor.translateAlternateColorCodes('&', template
+                .replace("{job}", job.getDisplayName())
+                .replace("{percent}", String.valueOf(highestCrossed))
+                .replace("{next_level}", String.valueOf(level + 1)));
+
+        player.spigot().sendMessage(ChatMessageType.ACTION_BAR, new TextComponent(message));
+    }
+
+    /** Dispatches any console commands configured for this job/level under milestone-rewards. */
+    private void dispatchMilestoneRewards(Player player, Job job, int level) {
+        List<String> commands = plugin.getConfig().getStringList("milestone-rewards." + job.name() + "." + level);
+        if (commands.isEmpty()) return;
+
+        for (String cmd : commands) {
+            String parsed = cmd.replace("%player%", player.getName());
+            plugin.getServer().dispatchCommand(plugin.getServer().getConsoleSender(), parsed);
+        }
+    }
+
     private void levelUp(Player player, Job job, JobProgress progress) {
+        int maxLevel = plugin.getJobsConfig().getMaxLevel();
+        if (progress.getLevel() >= maxLevel) return;
+
         progress.setLevel(progress.getLevel() + 1);
         progress.setXp(0);
+
+        // Publish swagjobs:level_up so other plugins (e.g. SwagFishing, SwagFarming) can react
+        // without calling SwagJobsAPI directly.
+        if (plugin.getBusService() != null) {
+            java.util.Map<String, Object> payload = new java.util.HashMap<>();
+            payload.put("uuid", player.getUniqueId().toString());
+            payload.put("job", job.getName());
+            payload.put("newLevel", progress.getLevel());
+
+            plugin.getBusService().publish(new com.SwagDev.SwagAPI.events.SwagCrossPluginMessageEvent(
+                    "swagjobs:level_up",
+                    "SwagJobs",
+                    payload,
+                    player.getUniqueId()
+            ));
+        }
 
         double moneyReward = plugin.getJobsConfig().getMoneyReward(progress.getLevel(), progress.getPrestige());
         var data = plugin.getPlayerDataManager().getPlayerData(player.getUniqueId());
 
-        // Use the new constructor with prestige!
         data.addReward(new Reward(job, progress.getLevel(), progress.getPrestige(), moneyReward));
 
-        // Chat message (no on-screen title, no sound - leveling is fast now)
+        dispatchMilestoneRewards(player, job, progress.getLevel());
+
         player.sendMessage(" ");
         player.sendMessage("§a§lLEVEL UP! §8» §7You are now level §f" + progress.getLevel() + " §7in §f" + job.getDisplayName() + "§7!");
         player.sendMessage("§8» §7A reward of §a₣" + moneyFormat.format(moneyReward) + " §7has been added to your collection menu.");

@@ -1,4 +1,4 @@
-﻿package com.swag.swagjobs.listener;
+package com.swag.swagjobs.listener;
 
 import com.swag.swagjobs.SwagJobsPlugin;
 import org.bukkit.event.EventHandler;
@@ -14,14 +14,9 @@ public class PlayerQuitListener implements Listener {
 
     @EventHandler
     public void onQuit(PlayerQuitEvent event) {
-        // Clean up the boss bar so it doesn't break on next join
         plugin.getBossBarManager().removePlayer(event.getPlayer());
-
-        // Use the correct method from your PlayerDataManager to save and remove from cache
         plugin.getPlayerDataManager().unloadPlayer(event.getPlayer());
-
-        // Clean up per-player streak and cheat-detection maps to prevent memory leaks
         plugin.getJobManager().cleanupPlayer(event.getPlayer().getUniqueId());
-        plugin.getCheatDetectionManager().cleanupPlayer(event.getPlayer().getUniqueId());
+        plugin.getPlaceBreakManager().cleanupPlayer(event.getPlayer().getUniqueId());
     }
 }

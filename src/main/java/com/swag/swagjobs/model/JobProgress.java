@@ -1,4 +1,4 @@
-﻿package com.swag.swagjobs.model;
+package com.swag.swagjobs.model;
 
 /**
  * Represents a player's progress in a single job
@@ -23,7 +23,6 @@ public class JobProgress {
         this.prestige = prestige;
     }
 
-    // Getters
     public Job getJob() {
         return job;
     }
@@ -40,7 +39,6 @@ public class JobProgress {
         return prestige;
     }
 
-    // Setters
     public void setLevel(int level) {
         this.level = level;
     }
@@ -53,25 +51,18 @@ public class JobProgress {
         this.prestige = prestige;
     }
 
-    /**
-     * Add XP to this job
-     * @return true if leveled up
-     */
     public boolean addXp(double amount, double xpRequired) {
         this.xp += amount;
 
         if (this.xp >= xpRequired) {
             this.xp -= xpRequired;
             this.level++;
-            return true; // Leveled up
+            return true;
         }
 
-        return false; // No level up
+        return false;
     }
 
-    /**
-     * Reset progress for prestige
-     */
     public void resetForPrestige() {
         this.level = 1;
         this.xp = 0.0;

@@ -5,6 +5,7 @@ target/
 .kotlin
 
 ### IntelliJ IDEA ###
+.idea/
 .idea/modules.xml
 .idea/jarRepositories.xml
 .idea/compiler.xml
@@ -37,3 +38,28 @@ build/
 
 ### Mac OS ###
 .DS_Store
+
+### Plugin runtime ###
+*.db
+logs/
+*.log
+*.class
+run/
+server/
+dependency-reduced-pom.xml
+
+### Claude AI settings — personal/local, never commit ###
+.claude/
+
+### Runtime files that may appear in project root (accidental copies, not the src/main/resources originals) ###
+/config.yml
+/plugin.yml
+/sqlite-jdbc.properties
+/META-INF/
+/org/
+
+### Windows ###
+Thumbs.db
+
+# NOTE: *.jar is intentionally NOT blanket-ignored here — libs/SwagAPI-1.0.0.jar and
+# libs/SwagTags.jar are committed on purpose (system-scope Maven deps, not in a repo).

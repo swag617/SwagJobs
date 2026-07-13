@@ -1,4 +1,4 @@
-﻿package com.swag.swagjobs.command;
+package com.swag.swagjobs.command;
 
 import com.swag.swagjobs.SwagJobsPlugin;
 import com.swag.swagjobs.model.Job;
@@ -25,6 +25,7 @@ public class JobsTabCompleter implements TabCompleter {
             "prestige",
             "shop",
             "shopedit",
+            "top",
             "help",
             "reload",
             "debug",
@@ -59,10 +60,6 @@ public class JobsTabCompleter implements TabCompleter {
         return completeDevCommand(args);
     }
 
-    // -------------------------------------------------------------------------
-    // /jobs completions
-    // -------------------------------------------------------------------------
-
     private List<String> completeJobsCommand(String[] args) {
         if (args.length == 1) {
             String partial = args[0].toLowerCase(Locale.ROOT);
@@ -74,7 +71,7 @@ public class JobsTabCompleter implements TabCompleter {
         String sub = args[0].toLowerCase(Locale.ROOT);
 
         if (args.length == 2) {
-            if (sub.equals("select") || sub.equals("progress")) {
+            if (sub.equals("select") || sub.equals("progress") || sub.equals("top")) {
                 String partial = args[1].toLowerCase(Locale.ROOT);
                 return Arrays.stream(Job.values())
                         .map(j -> j.getKey().toLowerCase(Locale.ROOT))
@@ -89,10 +86,6 @@ public class JobsTabCompleter implements TabCompleter {
 
         return Collections.emptyList();
     }
-
-    // -------------------------------------------------------------------------
-    // /SwagJobsdev completions (unchanged logic from original)
-    // -------------------------------------------------------------------------
 
     private List<String> completeDevCommand(String[] args) {
         if (args.length == 1) {
@@ -191,10 +184,6 @@ public class JobsTabCompleter implements TabCompleter {
 
         return Collections.emptyList();
     }
-
-    // -------------------------------------------------------------------------
-    // Shared helpers
-    // -------------------------------------------------------------------------
 
     private List<String> getPlayerNames(String partial) {
         String lower = partial.toLowerCase(Locale.ROOT);

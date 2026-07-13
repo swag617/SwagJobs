@@ -1,4 +1,4 @@
-﻿package com.swag.swagjobs.listener;
+package com.swag.swagjobs.listener;
 
 import com.swag.swagjobs.SwagJobsPlugin;
 import org.bukkit.entity.Player;
@@ -20,6 +20,10 @@ public class PlayerJoinListener implements Listener {
 
         try {
             plugin.getBossBarManager().show(player);
+        } catch (Exception ignored) { }
+
+        try {
+            plugin.getPlayerDataManager().tryGrantDailyBonus(player);
         } catch (Exception ignored) { }
     }
 

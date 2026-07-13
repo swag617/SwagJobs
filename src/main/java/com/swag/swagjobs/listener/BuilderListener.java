@@ -1,4 +1,4 @@
-﻿package com.swag.swagjobs.listener;
+package com.swag.swagjobs.listener;
 
 import com.swag.swagjobs.SwagJobsPlugin;
 import com.swag.swagjobs.model.Job;
@@ -20,12 +20,11 @@ public class BuilderListener implements Listener {
     public void onBlockPlace(BlockPlaceEvent event) {
         Material type = event.getBlock().getType();
 
-        // EXCLUDE FARMING BLOCKS: If it's a crop/seed, don't give Builder XP
         if (isFarmingBlock(type)) return;
 
-        // Anti-exploit: check place-break cycles before awarding XP
         Player player = event.getPlayer();
-        if (!plugin.getCheatDetectionManager().canGainXp(player, event.getBlock().getLocation())) return;
+
+        if (!plugin.getPlaceBreakManager().canGainXp(player, event.getBlock().getLocation())) return;
 
         String actionKey = type.name();
         if (plugin.getJobsConfig().getActionXP(Job.BUILDER, actionKey) <= 0) return;
