@@ -286,6 +286,26 @@ public class JobManager {
                     payload,
                     player.getUniqueId()
             ));
+
+            // Optional Discord announcement — DiscordUtils (if installed with a matching
+            // webhooks.* entry configured) picks this up with zero coupling here.
+            if (plugin.getConfig().getBoolean("discord.enabled", true)) {
+                String webhookName = plugin.getConfig().getString("discord.webhook-name", "jobs");
+                java.util.Map<String, Object> discordPayload = new java.util.HashMap<>();
+                discordPayload.put("webhook", webhookName);
+                discordPayload.put("description", "**" + player.getName() + "** reached level "
+                        + progress.getLevel() + " in **" + job.getDisplayName() + "**"
+                        + (progress.getPrestige() > 0 ? " (Prestige " + progress.getPrestige() + ")" : "") + "!");
+                discordPayload.put("color", 0x57F287);
+                discordPayload.put("username", "SwagJobs");
+
+                plugin.getBusService().publish(new com.SwagDev.SwagAPI.events.SwagCrossPluginMessageEvent(
+                        "discordutils:notify",
+                        "SwagJobs",
+                        discordPayload,
+                        player.getUniqueId()
+                ));
+            }
         }
 
         double moneyReward = plugin.getJobsConfig().getMoneyReward(progress.getLevel(), progress.getPrestige());

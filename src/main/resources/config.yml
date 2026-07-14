@@ -6,6 +6,13 @@ database:
   type: SQLITE
   file: SwagJobs.db
 
+# Published on SwagAPI's event bus (discordutils:notify channel). Requires DiscordUtils to
+# be installed with a matching "webhooks.<webhook-name>" entry in ITS config.yml — no
+# compile-time or reflection dependency on DiscordUtils from this plugin.
+discord:
+  enabled: true
+  webhook-name: "jobs"
+
 anticheat:
   # Place-break exploit detection (place a tracked block, break it yourself, repeat for free XP).
   # The macro/CPS-based anti-cheat system (consistency variance, AdvancedEnchantments hook) has
