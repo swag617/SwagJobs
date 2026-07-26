@@ -63,3 +63,7 @@ Thumbs.db
 
 # NOTE: *.jar is intentionally NOT blanket-ignored here — libs/SwagAPI-1.0.0.jar and
 # libs/SwagTags.jar are committed on purpose (system-scope Maven deps, not in a repo).
+
+### This plugin's own build output / unrelated stray jars — not source, not deps ###
+libs/SwagJobs-*.jar
+libs/fleajobs-*.jar
