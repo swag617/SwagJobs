@@ -454,18 +454,6 @@ public class DevCommand implements CommandExecutor {
             return;
         }
 
-        Object manager = null;
-        try {
-            manager = plugin.getSmelterCapManager();
-        } catch (NoSuchMethodError | Exception e) {
-            // ignored
-        }
-
-        if (manager == null) {
-            sender.sendMessage("§cSmelterCapManager not available. Make sure the plugin provides getSmelterCapManager().");
-            return;
-        }
-
         String action = args[1].toLowerCase(Locale.ROOT);
         switch (action) {
             case "set" -> {
@@ -481,20 +469,8 @@ public class DevCommand implements CommandExecutor {
                     sender.sendMessage("§cAmount must be a number.");
                     return;
                 }
-
-                try {
-                    manager.getClass().getMethod("setCapForRank", String.class, int.class).invoke(manager, rank, amount);
-                    try {
-                        plugin.getJobsConfig().saveSmelterCaps();
-                    } catch (Exception ignored) {}
-
-                    sender.sendMessage("§aSet smelter cap for rank '" + rank + "' to " + amount);
-                } catch (NoSuchMethodException nsme) {
-                    sender.sendMessage("§cSmelterCapManager.setCapForRank(String,int) not found.");
-                } catch (Exception e) {
-                    sender.sendMessage("§cFailed to set cap: " + e.getMessage());
-                    e.printStackTrace();
-                }
+                plugin.getJobsConfig().setSmelterCap(rank, amount);
+                sender.sendMessage("§aSet smelter cap for rank '" + rank + "' to " + amount);
             }
             case "get" -> {
                 if (args.length < 3) {
@@ -502,30 +478,15 @@ public class DevCommand implements CommandExecutor {
                     return;
                 }
                 String rank = args[2];
-                try {
-                    Object capObj = manager.getClass().getMethod("getCapForRank", String.class).invoke(manager, rank);
-                    int cap = capObj instanceof Integer ? (Integer) capObj : Integer.parseInt(capObj.toString());
-                    sender.sendMessage("§aSmelter cap for rank '" + rank + "' is " + cap);
-                } catch (NoSuchMethodException nsme) {
-                    sender.sendMessage("§cSmelterCapManager.getCapForRank(String) not found.");
-                } catch (Exception e) {
-                    sender.sendMessage("§cFailed to get cap: " + e.getMessage());
-                    e.printStackTrace();
-                }
+                int cap = plugin.getJobsConfig().getSmelterCap(rank);
+                sender.sendMessage("§aSmelter cap for rank '" + rank + "' is " + cap);
             }
             case "reset" -> {
-                try {
-                    manager.getClass().getMethod("resetToDefaults").invoke(manager);
-                    try {
-                        plugin.getJobsConfig().saveSmelterCaps();
-                    } catch (Exception ignored) {}
-                    sender.sendMessage("§aSmelter caps reset to defaults.");
-                } catch (NoSuchMethodException nsme) {
-                    sender.sendMessage("§cSmelterCapManager.resetToDefaults() not found.");
-                } catch (Exception e) {
-                    sender.sendMessage("§cFailed to reset caps: " + e.getMessage());
-                    e.printStackTrace();
-                }
+                plugin.getJobsConfig().setSmelterCap("member", 10);
+                plugin.getJobsConfig().setSmelterCap("axolotl", 15);
+                plugin.getJobsConfig().setSmelterCap("lizard", 20);
+                plugin.getJobsConfig().setSmelterCap("flea", 25);
+                sender.sendMessage("§aSmelter caps reset to defaults.");
             }
             default -> sender.sendMessage("§cUnknown action. Usage: /SwagJobsdev smeltercap <set|get|reset> ...");
         }

@@ -7,9 +7,11 @@ import com.swag.swagjobs.model.PlayerJobData;
 import com.swag.swagjobs.model.Reward;
 
 import java.io.File;
+import java.io.IOException;
 import java.sql.*;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Properties;
 import java.util.UUID;
 import java.util.logging.Level;
 
@@ -49,6 +51,10 @@ public class DatabaseManager {
         // One-time import of a legacy standalone database (old FleaJobs or pre-SwagAPI SwagJobs
         // install) if the admin dropped one into this plugin's data folder. See method below.
         importLegacyDatabaseIfPresent();
+
+        // Fully automatic import straight from a still-present sibling FleaJobs install —
+        // no admin file-copying required. See method below.
+        importFromSiblingFleaJobsInstallIfPresent();
     }
 
     /**
@@ -60,6 +66,10 @@ public class DatabaseManager {
      * The legacy schema is identical to this plugin's schema (same table/column names), so
      * rows are copied as-is. Existing rows in the shared database are never overwritten
      * (INSERT ... IGNORE) so this is safe to run against a database that already has data.
+     *
+     * This is a fallback/explicit path — {@link #importFromSiblingFleaJobsInstallIfPresent()}
+     * handles the fully automatic case where FleaJobs's own data folder is still present
+     * alongside this plugin's, so most admins never need to use this manual drop-in path.
      */
     private void importLegacyDatabaseIfPresent() {
         File dataFolder = plugin.getDataFolder();
@@ -69,81 +79,8 @@ public class DatabaseManager {
             File legacyFile = new File(dataFolder, name);
             if (!legacyFile.isFile()) continue;
 
-            plugin.getLogger().info("Found legacy database '" + name + "' — importing into the SwagAPI shared database...");
-            boolean ok = true;
-            try {
-                Class.forName("org.sqlite.JDBC");
-                try (Connection legacy = DriverManager.getConnection("jdbc:sqlite:" + legacyFile.getAbsolutePath())) {
-                    boolean mysql = dbService.isMySQL();
-
-                    int jobs = importLegacyTable(legacy,
-                            "SELECT uuid, job_name, level, xp, prestige, job_points FROM player_jobs",
-                            (mysql ? "INSERT IGNORE INTO " : "INSERT OR IGNORE INTO ")
-                                    + "player_jobs (uuid, job_name, level, xp, prestige, job_points) VALUES (?, ?, ?, ?, ?, ?)",
-                            (rs, ps) -> {
-                                ps.setString(1, rs.getString("uuid"));
-                                ps.setString(2, rs.getString("job_name"));
-                                ps.setInt(3, rs.getInt("level"));
-                                ps.setDouble(4, rs.getDouble("xp"));
-                                ps.setInt(5, rs.getInt("prestige"));
-                                ps.setInt(6, rs.getInt("job_points"));
-                            });
-
-                    int rewards = importLegacyTable(legacy,
-                            "SELECT uuid, job_name, level, money, claimed, prestige FROM player_rewards",
-                            (mysql ? "INSERT IGNORE INTO " : "INSERT OR IGNORE INTO ")
-                                    + "player_rewards (uuid, job_name, level, money, claimed, prestige) VALUES (?, ?, ?, ?, ?, ?)",
-                            (rs, ps) -> {
-                                ps.setString(1, rs.getString("uuid"));
-                                ps.setString(2, rs.getString("job_name"));
-                                ps.setInt(3, rs.getInt("level"));
-                                ps.setDouble(4, rs.getDouble("money"));
-                                ps.setBoolean(5, rs.getBoolean("claimed"));
-                                ps.setInt(6, rs.getInt("prestige"));
-                            });
-
-                    int activeJobs = importLegacyTable(legacy,
-                            "SELECT uuid, active_job FROM player_active_job",
-                            (mysql ? "INSERT IGNORE INTO " : "INSERT OR IGNORE INTO ")
-                                    + "player_active_job (uuid, active_job) VALUES (?, ?)",
-                            (rs, ps) -> {
-                                ps.setString(1, rs.getString("uuid"));
-                                ps.setString(2, rs.getString("active_job"));
-                            });
-
-                    int smelterBlocks = importLegacyTable(legacy,
-                            "SELECT uuid, world, x, y, z, block_type FROM player_smelter_blocks",
-                            (mysql ? "INSERT IGNORE INTO " : "INSERT OR IGNORE INTO ")
-                                    + "player_smelter_blocks (uuid, world, x, y, z, block_type) VALUES (?, ?, ?, ?, ?, ?)",
-                            (rs, ps) -> {
-                                ps.setString(1, rs.getString("uuid"));
-                                ps.setString(2, rs.getString("world"));
-                                ps.setInt(3, rs.getInt("x"));
-                                ps.setInt(4, rs.getInt("y"));
-                                ps.setInt(5, rs.getInt("z"));
-                                ps.setString(6, rs.getString("block_type"));
-                            });
-
-                    int shopPurchases = importLegacyTable(legacy,
-                            "SELECT uuid, player_name, item_id, cost, timestamp FROM prestige_shop_purchases",
-                            "INSERT INTO prestige_shop_purchases (uuid, player_name, item_id, cost, timestamp) VALUES (?, ?, ?, ?, ?)",
-                            (rs, ps) -> {
-                                ps.setString(1, rs.getString("uuid"));
-                                ps.setString(2, rs.getString("player_name"));
-                                ps.setString(3, rs.getString("item_id"));
-                                ps.setInt(4, rs.getInt("cost"));
-                                ps.setLong(5, rs.getLong("timestamp"));
-                            });
-
-                    plugin.getLogger().info("Legacy import from '" + name + "' complete: "
-                            + jobs + " job rows, " + rewards + " reward rows, " + activeJobs + " active-job rows, "
-                            + smelterBlocks + " smelter blocks, " + shopPurchases + " shop purchases.");
-                }
-            } catch (Exception e) {
-                ok = false;
-                plugin.getLogger().log(Level.SEVERE, "Failed to import legacy database '" + name + "'. " +
-                        "It has been left in place so you can retry after fixing the issue.", e);
-            }
+            plugin.getLogger().info("Found legacy database '" + name + "' in SwagJobs's own data folder — importing into the SwagAPI shared database...");
+            boolean ok = importLegacyDatabaseFile(legacyFile, name, false);
 
             if (ok) {
                 File renamed = new File(dataFolder, name + ".imported");
@@ -154,6 +91,156 @@ public class DatabaseManager {
                             "Please rename or remove it manually to prevent re-importing on next restart.");
                 }
             }
+        }
+    }
+
+    /**
+     * Fully automatic, "hidden" migration path: if a sibling FleaJobs plugin data folder
+     * ({@code plugins/FleaJobs/}) still exists next to this plugin's own data folder
+     * ({@code plugins/SwagJobs/}) and contains a {@code fleajobs.db}, its rows are imported
+     * into the SwagAPI shared database automatically — no admin action required at all.
+     *
+     * This is strictly READ-ONLY with respect to {@code plugins/FleaJobs/}: SwagJobs does not
+     * own that directory (FleaJobs may still be installed, or simply left in place after being
+     * uninstalled) so nothing inside it is ever renamed, moved, or deleted. The legacy SQLite
+     * connection is opened in read-only mode so not even a WAL/journal side-file is written
+     * there. "Already imported" is instead tracked with a marker file inside SwagJobs's own
+     * data folder — safe to call on every startup.
+     */
+    private void importFromSiblingFleaJobsInstallIfPresent() {
+        File dataFolder = plugin.getDataFolder();
+        File marker = new File(dataFolder, ".fleajobs_sibling_import.done");
+        if (marker.isFile()) {
+            return; // already imported from the sibling FleaJobs install in a previous run
+        }
+
+        File siblingFolder = new File(dataFolder.getParentFile(), "FleaJobs");
+        File siblingDb = new File(siblingFolder, "fleajobs.db");
+        if (!siblingDb.isFile()) {
+            // Nothing to import (yet). Deliberately do NOT write the marker here — if FleaJobs
+            // is installed/populated later, or this runs before FleaJobs has created its file,
+            // we want to retry the check again on the next restart.
+            return;
+        }
+
+        plugin.getLogger().info("Found a sibling FleaJobs install at '" + siblingDb.getAbsolutePath() +
+                "' — automatically importing its data into the SwagAPI shared database. " +
+                "(Read-only: the FleaJobs folder itself will not be modified.)");
+
+        boolean ok = importLegacyDatabaseFile(siblingDb, "sibling FleaJobs install", true);
+
+        if (ok) {
+            try {
+                if (marker.createNewFile()) {
+                    plugin.getLogger().info("Sibling FleaJobs import complete. Marked done at '" + marker.getAbsolutePath() +
+                            "' so it will not be re-imported on future restarts.");
+                }
+            } catch (IOException e) {
+                plugin.getLogger().log(Level.WARNING, "Sibling FleaJobs import succeeded but the completion marker could not be " +
+                        "written to '" + marker.getAbsolutePath() + "'. It may be re-imported on next restart " +
+                        "(safe: duplicate rows are ignored either way).", e);
+            }
+        } else {
+            plugin.getLogger().warning("Sibling FleaJobs import failed — will retry automatically on next restart.");
+        }
+    }
+
+    /**
+     * Opens a JDBC connection to {@code legacyFile} (a legacy fleajobs.db/SwagJobs.db) and
+     * imports its five known tables into the SwagAPI shared database. Shared by both the
+     * manual drop-in path and the automatic sibling-install path above.
+     *
+     * @param readOnly if true, the legacy connection is opened read-only (used for the sibling
+     *                 FleaJobs install, which SwagJobs does not own and must not write to at all —
+     *                 not even a WAL/journal file)
+     * @return true if the import ran to completion without throwing
+     */
+    private boolean importLegacyDatabaseFile(File legacyFile, String sourceLabel, boolean readOnly) {
+        try {
+            Class.forName("org.sqlite.JDBC");
+
+            String url = "jdbc:sqlite:" + legacyFile.getAbsolutePath();
+            Connection legacy;
+            if (readOnly) {
+                org.sqlite.SQLiteConfig config = new org.sqlite.SQLiteConfig();
+                config.setReadOnly(true);
+                Properties props = config.toProperties();
+                legacy = DriverManager.getConnection(url, props);
+            } else {
+                legacy = DriverManager.getConnection(url);
+            }
+
+            try (Connection legacyConn = legacy) {
+                boolean mysql = dbService.isMySQL();
+
+                int jobs = importLegacyTable(legacyConn,
+                        "SELECT uuid, job_name, level, xp, prestige, job_points FROM player_jobs",
+                        (mysql ? "INSERT IGNORE INTO " : "INSERT OR IGNORE INTO ")
+                                + "player_jobs (uuid, job_name, level, xp, prestige, job_points) VALUES (?, ?, ?, ?, ?, ?)",
+                        (rs, ps) -> {
+                            ps.setString(1, rs.getString("uuid"));
+                            ps.setString(2, rs.getString("job_name"));
+                            ps.setInt(3, rs.getInt("level"));
+                            ps.setDouble(4, rs.getDouble("xp"));
+                            ps.setInt(5, rs.getInt("prestige"));
+                            ps.setInt(6, rs.getInt("job_points"));
+                        });
+
+                int rewards = importLegacyTable(legacyConn,
+                        "SELECT uuid, job_name, level, money, claimed, prestige FROM player_rewards",
+                        (mysql ? "INSERT IGNORE INTO " : "INSERT OR IGNORE INTO ")
+                                + "player_rewards (uuid, job_name, level, money, claimed, prestige) VALUES (?, ?, ?, ?, ?, ?)",
+                        (rs, ps) -> {
+                            ps.setString(1, rs.getString("uuid"));
+                            ps.setString(2, rs.getString("job_name"));
+                            ps.setInt(3, rs.getInt("level"));
+                            ps.setDouble(4, rs.getDouble("money"));
+                            ps.setBoolean(5, rs.getBoolean("claimed"));
+                            ps.setInt(6, rs.getInt("prestige"));
+                        });
+
+                int activeJobs = importLegacyTable(legacyConn,
+                        "SELECT uuid, active_job FROM player_active_job",
+                        (mysql ? "INSERT IGNORE INTO " : "INSERT OR IGNORE INTO ")
+                                + "player_active_job (uuid, active_job) VALUES (?, ?)",
+                        (rs, ps) -> {
+                            ps.setString(1, rs.getString("uuid"));
+                            ps.setString(2, rs.getString("active_job"));
+                        });
+
+                int smelterBlocks = importLegacyTable(legacyConn,
+                        "SELECT uuid, world, x, y, z, block_type FROM player_smelter_blocks",
+                        (mysql ? "INSERT IGNORE INTO " : "INSERT OR IGNORE INTO ")
+                                + "player_smelter_blocks (uuid, world, x, y, z, block_type) VALUES (?, ?, ?, ?, ?, ?)",
+                        (rs, ps) -> {
+                            ps.setString(1, rs.getString("uuid"));
+                            ps.setString(2, rs.getString("world"));
+                            ps.setInt(3, rs.getInt("x"));
+                            ps.setInt(4, rs.getInt("y"));
+                            ps.setInt(5, rs.getInt("z"));
+                            ps.setString(6, rs.getString("block_type"));
+                        });
+
+                int shopPurchases = importLegacyTable(legacyConn,
+                        "SELECT uuid, player_name, item_id, cost, timestamp FROM prestige_shop_purchases",
+                        "INSERT INTO prestige_shop_purchases (uuid, player_name, item_id, cost, timestamp) VALUES (?, ?, ?, ?, ?)",
+                        (rs, ps) -> {
+                            ps.setString(1, rs.getString("uuid"));
+                            ps.setString(2, rs.getString("player_name"));
+                            ps.setString(3, rs.getString("item_id"));
+                            ps.setInt(4, rs.getInt("cost"));
+                            ps.setLong(5, rs.getLong("timestamp"));
+                        });
+
+                plugin.getLogger().info("Legacy import from '" + sourceLabel + "' complete: "
+                        + jobs + " job rows, " + rewards + " reward rows, " + activeJobs + " active-job rows, "
+                        + smelterBlocks + " smelter blocks, " + shopPurchases + " shop purchases.");
+            }
+            return true;
+        } catch (Exception e) {
+            plugin.getLogger().log(Level.SEVERE, "Failed to import legacy database '" + sourceLabel + "'. " +
+                    "It has been left in place so you can retry after fixing the issue.", e);
+            return false;
         }
     }
 
