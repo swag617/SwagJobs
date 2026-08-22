@@ -5,6 +5,7 @@ import com.swag.swagjobs.gui.PrestigeShopEditGUI;
 import com.swag.swagjobs.gui.PrestigeShopGUI;
 import com.swag.swagjobs.manager.PrestigeShopManager;
 import com.swag.swagjobs.model.PrestigeShopItem;
+import com.swag.swagjobs.util.MessageUtil;
 import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
 import org.bukkit.Material;
@@ -90,7 +91,7 @@ public class PrestigeShopListener implements Listener {
         if (existing != null) {
             if (event.isLeftClick()) {
                 manager.removeItem(existing.getId());
-                player.sendMessage("§c[SwagJobs] Item §f" + existing.getId() + "§c removed from shop.");
+                player.sendMessage("§c" + MessageUtil.getBracketTag() + " Item §f" + existing.getId() + "§c removed from shop.");
                 Bukkit.getScheduler().runTask(plugin, () -> new PrestigeShopEditGUI(plugin).open(player));
                 return;
             }
@@ -110,7 +111,7 @@ public class PrestigeShopListener implements Listener {
                         null); // not capturing a new item
                 pendingSessions.put(player.getUniqueId(), session);
                 player.closeInventory();
-                player.sendMessage("§e[SwagJobs] Type the new cost in Job Points (or §ccancel§e):");
+                player.sendMessage("§e" + MessageUtil.getBracketTag() + " Type the new cost in Job Points (or §ccancel§e):");
                 return;
             }
         } else {
@@ -125,7 +126,7 @@ public class PrestigeShopListener implements Listener {
                         heldClone);
                 pendingSessions.put(player.getUniqueId(), session);
                 player.closeInventory();
-                player.sendMessage("§e[SwagJobs] Holding: §f" + heldMat.name()
+                player.sendMessage("§e" + MessageUtil.getBracketTag() + " Holding: §f" + heldMat.name()
                         + "§e. Type the shop item name (or §ccancel§e):");
             }
         }
@@ -182,7 +183,7 @@ public class PrestigeShopListener implements Listener {
 
         if (input.equalsIgnoreCase("cancel")) {
             pendingSessions.remove(player.getUniqueId());
-            player.sendMessage("§c[SwagJobs] Cancelled.");
+            player.sendMessage("§c" + MessageUtil.getBracketTag() + " Cancelled.");
             Bukkit.getScheduler().runTask(plugin, () -> new PrestigeShopEditGUI(plugin).open(player));
             return;
         }
@@ -191,7 +192,7 @@ public class PrestigeShopListener implements Listener {
             case AWAITING_NAME -> {
                 session.builder.name(input);
                 session.state = SessionState.AWAITING_RARITY;
-                player.sendMessage("§e[SwagJobs] Type the rarity (§fCOMMON §7/ §fUNCOMMON §7/ §fRARE §7/ §fEPIC §7/ §fLEGENDARY§e) or §fnone§e to skip:");
+                player.sendMessage("§e" + MessageUtil.getBracketTag() + " Type the rarity (§fCOMMON §7/ §fUNCOMMON §7/ §fRARE §7/ §fEPIC §7/ §fLEGENDARY§e) or §fnone§e to skip:");
             }
 
             case AWAITING_RARITY -> {
@@ -199,13 +200,13 @@ public class PrestigeShopListener implements Listener {
                     String r = input.toUpperCase();
                     if (!r.equals("COMMON") && !r.equals("UNCOMMON") && !r.equals("RARE")
                             && !r.equals("EPIC") && !r.equals("LEGENDARY")) {
-                        player.sendMessage("§c[SwagJobs] Invalid rarity. Use COMMON, UNCOMMON, RARE, EPIC, LEGENDARY, or none:");
+                        player.sendMessage("§c" + MessageUtil.getBracketTag() + " Invalid rarity. Use COMMON, UNCOMMON, RARE, EPIC, LEGENDARY, or none:");
                         break;
                     }
                     session.builder.rarity(r);
                 }
                 session.state = SessionState.AWAITING_COST;
-                player.sendMessage("§e[SwagJobs] Type the cost in Job Points:");
+                player.sendMessage("§e" + MessageUtil.getBracketTag() + " Type the cost in Job Points:");
             }
 
             case AWAITING_COST -> {
@@ -214,9 +215,9 @@ public class PrestigeShopListener implements Listener {
                     if (cost < 0) throw new NumberFormatException();
                     session.builder.cost(cost);
                     session.state = SessionState.AWAITING_TYPE;
-                    player.sendMessage("§e[SwagJobs] Type §fITEM §e(gives hand item) or §fCOMMAND§e:");
+                    player.sendMessage("§e" + MessageUtil.getBracketTag() + " Type §fITEM §e(gives hand item) or §fCOMMAND§e:");
                 } catch (NumberFormatException e) {
-                    player.sendMessage("§c[SwagJobs] Invalid number. Try again or type §fcancel§c:");
+                    player.sendMessage("§c" + MessageUtil.getBracketTag() + " Invalid number. Try again or type §fcancel§c:");
                 }
             }
 
@@ -228,15 +229,15 @@ public class PrestigeShopListener implements Listener {
                             session.builder.itemData(session.capturedItem);
                         }
                         session.state = SessionState.AWAITING_MAX_PURCHASES;
-                        player.sendMessage("§e[SwagJobs] Type max purchases per player (§f-1§e for unlimited):");
+                        player.sendMessage("§e" + MessageUtil.getBracketTag() + " Type max purchases per player (§f-1§e for unlimited):");
                     }
                     case "COMMAND" -> {
                         session.builder.type(PrestigeShopItem.ShopItemType.COMMAND);
                         session.state = SessionState.AWAITING_COMMANDS;
-                        player.sendMessage("§e[SwagJobs] Type each console command on a separate line."
+                        player.sendMessage("§e" + MessageUtil.getBracketTag() + " Type each console command on a separate line."
                                 + " Use §f%player%§e for buyer. Type §fdone§e when finished:");
                     }
-                    default -> player.sendMessage("§c[SwagJobs] Please type §fITEM§c or §fCOMMAND§c:");
+                    default -> player.sendMessage("§c" + MessageUtil.getBracketTag() + " Please type §fITEM§c or §fCOMMAND§c:");
                 }
             }
 
@@ -244,10 +245,10 @@ public class PrestigeShopListener implements Listener {
                 if (input.equalsIgnoreCase("done")) {
                     session.builder.commands(session.accumulatedCommands);
                     session.state = SessionState.AWAITING_MAX_PURCHASES;
-                    player.sendMessage("§e[SwagJobs] Type max purchases per player (§f-1§e for unlimited):");
+                    player.sendMessage("§e" + MessageUtil.getBracketTag() + " Type max purchases per player (§f-1§e for unlimited):");
                 } else {
                     session.accumulatedCommands.add(input);
-                    player.sendMessage("§7[SwagJobs] Command added. Continue or type §fdone§7:");
+                    player.sendMessage("§7" + MessageUtil.getBracketTag() + " Command added. Continue or type §fdone§7:");
                 }
             }
 
@@ -266,11 +267,11 @@ public class PrestigeShopListener implements Listener {
                     plugin.getPrestigeShopManager().addItem(newItem);
                     pendingSessions.remove(player.getUniqueId());
 
-                    player.sendMessage("§a[SwagJobs] §l✔ Item added to slot §f" + newItem.getSlot()
+                    player.sendMessage("§a" + MessageUtil.getBracketTag() + " §l✔ Item added to slot §f" + newItem.getSlot()
                             + "§a! Use §f/jobs shopedit§a to continue editing.");
                     Bukkit.getScheduler().runTask(plugin, () -> new PrestigeShopEditGUI(plugin).open(player));
                 } catch (NumberFormatException e) {
-                    player.sendMessage("§c[SwagJobs] Invalid number. Use -1 for unlimited or a positive integer:");
+                    player.sendMessage("§c" + MessageUtil.getBracketTag() + " Invalid number. Use -1 for unlimited or a positive integer:");
                 }
             }
         }

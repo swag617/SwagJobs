@@ -1,5 +1,5 @@
 ﻿name: SwagJobs
-version: 1.2.0
+version: 1.2.3
 main: com.swag.swagjobs.SwagJobsPlugin
 api-version: 1.21
 author: Swag

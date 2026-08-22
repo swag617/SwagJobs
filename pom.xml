@@ -6,7 +6,7 @@
 
     <groupId>com.swag</groupId>
     <artifactId>SwagJobs</artifactId>
-    <version>1.2.0</version>
+    <version>1.2.3</version>
     <packaging>jar</packaging>
 
     <name>SwagJobs</name>
@@ -75,9 +75,9 @@
         <dependency>
             <groupId>com.SwagDev</groupId>
             <artifactId>SwagAPI</artifactId>
-            <version>1.0.0</version>
+            <version>1.0.3</version>
             <scope>system</scope>
-            <systemPath>${project.basedir}/libs/SwagAPI-1.0.0.jar</systemPath>
+            <systemPath>${project.basedir}/libs/SwagAPI-1.0.3.jar</systemPath>
         </dependency>
 
         <!-- Lombok (optional, for reducing boilerplate) -->

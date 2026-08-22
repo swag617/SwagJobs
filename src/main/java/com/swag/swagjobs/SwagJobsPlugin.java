@@ -52,6 +52,7 @@ public class SwagJobsPlugin extends JavaPlugin {
     private com.SwagDev.SwagAPI.api.IEconomyService    ecoService;
     private com.SwagDev.SwagAPI.api.IPlayerDataService playerService;
     private com.SwagDev.SwagAPI.api.IEventBusService   busService;
+    private com.SwagDev.SwagAPI.api.IPrefixService     prefixService;
 
     @Override
     public void onEnable() {
@@ -337,6 +338,15 @@ public class SwagJobsPlugin extends JavaPlugin {
             getLogger().info("Hooked SwagAPI IEventBusService.");
         }
 
+        // Prefix override — lets a server admin override this plugin's self-identifying
+        // chat prefix from the SwagAPI web panel (per-plugin or global override).
+        org.bukkit.plugin.RegisteredServiceProvider<com.SwagDev.SwagAPI.api.IPrefixService> prefixProv =
+                sm.getRegistration(com.SwagDev.SwagAPI.api.IPrefixService.class);
+        if (prefixProv != null) {
+            prefixService = prefixProv.getProvider();
+            getLogger().info("Hooked SwagAPI IPrefixService.");
+        }
+
         getLogger().info("SwagAPI hook complete.");
         return true;
     }
@@ -345,6 +355,7 @@ public class SwagJobsPlugin extends JavaPlugin {
     public com.SwagDev.SwagAPI.api.IEconomyService    getEcoService()    { return ecoService; }
     public com.SwagDev.SwagAPI.api.IPlayerDataService getPlayerService() { return playerService; }
     public com.SwagDev.SwagAPI.api.IEventBusService   getBusService()    { return busService; }
+    public com.SwagDev.SwagAPI.api.IPrefixService     getPrefixService() { return prefixService; }
 
     public static SwagJobsPlugin getInstance() { return instance; }
     public DatabaseManager getDatabaseManager() { return databaseManager; }
