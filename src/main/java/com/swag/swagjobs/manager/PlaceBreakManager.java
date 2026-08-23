@@ -27,7 +27,7 @@ import java.util.concurrent.ConcurrentHashMap;
  * Config keys (with defaults):
  *   anticheat.place-break-max-cycles: 3
  *   anticheat.place-break-timeout-seconds: 120
- *   anticheat.track-exploit-blocks: [MELON_BLOCK, PUMPKIN, MELON]
+ *   anticheat.track-exploit-blocks: [PUMPKIN, MELON]
  */
 public class PlaceBreakManager implements Listener {
 
@@ -93,7 +93,7 @@ public class PlaceBreakManager implements Listener {
         // Load tracked materials from config; fall back to sensible defaults.
         List<String> configList = plugin.getConfig().getStringList("anticheat.track-exploit-blocks");
         if (configList.isEmpty()) {
-            configList = Arrays.asList("MELON_BLOCK", "PUMPKIN", "MELON");
+            configList = Arrays.asList("PUMPKIN", "MELON");
         }
         for (String name : configList) {
             try {

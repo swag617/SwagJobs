@@ -21,7 +21,6 @@ anticheat:
   place-break-max-cycles: 3
   place-break-timeout-seconds: 120
   track-exploit-blocks:
-    - MELON_BLOCK
     - PUMPKIN
     - MELON
   # When true, online staff with admin-permission are messaged when a player exceeds the cycle cap.

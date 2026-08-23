@@ -174,7 +174,7 @@ rank-caps:            # Smelter/brewer block credit caps
 anticheat:
   place-break-max-cycles: 3
   place-break-timeout-seconds: 120
-  track-exploit-blocks: [MELON_BLOCK, PUMPKIN, MELON]
+  track-exploit-blocks: [PUMPKIN, MELON]
   alert-admins: false
   admin-permission: "SwagJobs.admin.alerts"
   flag-cooldown-ms: 60000

@@ -1,5 +1,5 @@
 ﻿name: SwagJobs
-version: 1.2.3
+version: '${project.version}'
 main: com.swag.swagjobs.SwagJobsPlugin
 api-version: 1.21
 author: Swag
