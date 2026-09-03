@@ -32,11 +32,18 @@ public class BuilderListener implements Listener {
         plugin.getJobManager().processAction(player, Job.BUILDER, actionKey);
     }
 
+    // Also covers SwagFarming's custom crops that place a real vanilla block via
+    // uncancelled native placement (see CropPlantListener's NATIVE_PLACEMENT_CROPS):
+    // golden_wheat -> WHEAT, mystic_bean -> COCOA, ice_berry -> SWEET_BERRY_BUSH,
+    // sunforged_barley -> TORCHFLOWER_CROP. Without TORCHFLOWER_CROP here, planting
+    // sunforged_barley seeds fired this listener uncancelled and awarded Builder XP
+    // on top of SwagFarming's own correct FARMER XP award (reported bug).
     private boolean isFarmingBlock(Material type) {
         return type == Material.WHEAT || type == Material.CARROTS ||
                 type == Material.POTATOES || type == Material.BEETROOTS ||
                 type == Material.NETHER_WART || type == Material.SUGAR_CANE ||
                 type == Material.PUMPKIN || type == Material.MELON ||
-                type == Material.COCOA || type == Material.SWEET_BERRY_BUSH;
+                type == Material.COCOA || type == Material.SWEET_BERRY_BUSH ||
+                type == Material.TORCHFLOWER_CROP;
     }
 }
