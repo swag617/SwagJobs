@@ -469,7 +469,9 @@ public class DatabaseManager {
 
                 try (PreparedStatement psUpsertJob = connection.prepareStatement(
                         "INSERT INTO player_jobs (uuid, job_name, level, xp, prestige, job_points) VALUES (?, ?, ?, ?, ?, ?) " +
-                                "ON CONFLICT(uuid, job_name) DO UPDATE SET level = excluded.level, xp = excluded.xp, prestige = excluded.prestige, job_points = excluded.job_points"
+                                (dbService.isMySQL()
+                                        ? "ON DUPLICATE KEY UPDATE level = VALUES(level), xp = VALUES(xp), prestige = VALUES(prestige), job_points = VALUES(job_points)"
+                                        : "ON CONFLICT(uuid, job_name) DO UPDATE SET level = excluded.level, xp = excluded.xp, prestige = excluded.prestige, job_points = excluded.job_points")
                 )) {
                     for (Job job : Job.values()) {
                         JobProgress progress = data.getJobProgress(job);
@@ -514,7 +516,9 @@ public class DatabaseManager {
 
                 try (PreparedStatement psActive = connection.prepareStatement(
                         "INSERT INTO player_active_job (uuid, active_job) VALUES (?, ?) " +
-                                "ON CONFLICT(uuid) DO UPDATE SET active_job = excluded.active_job"
+                                (dbService.isMySQL()
+                                        ? "ON DUPLICATE KEY UPDATE active_job = VALUES(active_job)"
+                                        : "ON CONFLICT(uuid) DO UPDATE SET active_job = excluded.active_job")
                 )) {
                     psActive.setString(1, data.getPlayerId().toString());
                     psActive.setString(2, data.getActiveJob() != null ? data.getActiveJob().getName() : null);
@@ -800,7 +804,9 @@ public class DatabaseManager {
 
                 try (PreparedStatement ps = connection.prepareStatement(
                         "INSERT INTO player_daily_bonus (uuid, last_claim_date) VALUES (?, ?) " +
-                                "ON CONFLICT(uuid) DO UPDATE SET last_claim_date = excluded.last_claim_date")) {
+                                (dbService.isMySQL()
+                                        ? "ON DUPLICATE KEY UPDATE last_claim_date = VALUES(last_claim_date)"
+                                        : "ON CONFLICT(uuid) DO UPDATE SET last_claim_date = excluded.last_claim_date"))) {
                     ps.setString(1, uuid.toString());
                     ps.setString(2, today);
                     ps.executeUpdate();
