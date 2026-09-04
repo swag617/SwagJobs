@@ -317,6 +317,15 @@ public class DatabaseManager {
      * - Dedupes existing player_rewards rows and creates a UNIQUE index on (uuid, job_name, level, prestige)
      */
     private void createTables() throws SQLException {
+        // SQLite's AUTOINCREMENT keyword is a syntax error on MySQL, which requires
+        // AUTO_INCREMENT (with the underscore) instead - neither engine accepts the
+        // other's spelling, so this has to branch per table rather than use one
+        // literal. Left un-branched, MySQL throws on the first such CREATE TABLE and
+        // (since these three calls aren't individually try/caught) that exception
+        // aborts every statement after it in this method - the real cause of
+        // "Table 'player_rewards' doesn't exist" plus player_active_job,
+        // player_smelter_blocks and prestige_shop_purchases all going missing too.
+        String autoIncrement = dbService.isMySQL() ? "AUTO_INCREMENT" : "AUTOINCREMENT";
         try (Connection connection = getConnection();
              Statement statement = connection.createStatement()) {
             statement.execute("CREATE TABLE IF NOT EXISTS player_jobs (" +
@@ -329,7 +338,7 @@ public class DatabaseManager {
                     "PRIMARY KEY (uuid, job_name))");
 
             statement.execute("CREATE TABLE IF NOT EXISTS player_rewards (" +
-                    "id INTEGER PRIMARY KEY AUTOINCREMENT," +
+                    "id INTEGER PRIMARY KEY " + autoIncrement + "," +
                     "uuid VARCHAR(36) NOT NULL," +
                     "job_name VARCHAR(32) NOT NULL," +
                     "level INTEGER NOT NULL," +
@@ -342,7 +351,7 @@ public class DatabaseManager {
                     "active_job VARCHAR(32))");
 
             statement.execute("CREATE TABLE IF NOT EXISTS player_smelter_blocks (" +
-                    "id INTEGER PRIMARY KEY AUTOINCREMENT," +
+                    "id INTEGER PRIMARY KEY " + autoIncrement + "," +
                     "uuid VARCHAR(36) NOT NULL," +
                     "world VARCHAR(64) NOT NULL," +
                     "x INTEGER NOT NULL," +
@@ -380,7 +389,7 @@ public class DatabaseManager {
             }
 
             statement.execute("CREATE TABLE IF NOT EXISTS prestige_shop_purchases (" +
-                    "id INTEGER PRIMARY KEY AUTOINCREMENT," +
+                    "id INTEGER PRIMARY KEY " + autoIncrement + "," +
                     "uuid VARCHAR(36) NOT NULL," +
                     "player_name VARCHAR(32) NOT NULL," +
                     "item_id VARCHAR(64) NOT NULL," +
