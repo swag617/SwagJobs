@@ -617,7 +617,9 @@ public class DatabaseManager {
         synchronized (dbLock) {
             try (Connection connection = getConnection();
                  PreparedStatement ps = connection.prepareStatement(
-                    "INSERT OR REPLACE INTO player_smelter_blocks (uuid, world, x, y, z, block_type) VALUES (?, ?, ?, ?, ?, ?)")) {
+                    dbService.isMySQL()
+                            ? "INSERT INTO player_smelter_blocks (uuid, world, x, y, z, block_type) VALUES (?, ?, ?, ?, ?, ?) ON DUPLICATE KEY UPDATE uuid = VALUES(uuid), block_type = VALUES(block_type)"
+                            : "INSERT OR REPLACE INTO player_smelter_blocks (uuid, world, x, y, z, block_type) VALUES (?, ?, ?, ?, ?, ?)")) {
                 ps.setString(1, uuid.toString());
                 ps.setString(2, world);
                 ps.setInt(3, x);
