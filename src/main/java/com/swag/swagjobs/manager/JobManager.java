@@ -6,6 +6,7 @@ import com.swag.swagjobs.model.JobProgress;
 import com.swag.swagjobs.model.Reward;
 import net.md_5.bungee.api.ChatMessageType;
 import net.md_5.bungee.api.chat.TextComponent;
+import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
 import org.bukkit.Sound;
 import org.bukkit.Particle;
@@ -320,6 +321,15 @@ public class JobManager {
         player.sendMessage("§8» §7A reward of §a₣" + moneyFormat.format(moneyReward) + " §7has been added to your collection menu.");
         player.sendMessage(" ");
 
-        plugin.getDatabaseManager().savePlayerData(data);
+        // PERF FIX: savePlayerData() is a synchronous JDBC call (batched upserts across every
+        // Job, plus a per-unclaimed-reward round trip) guarded by DatabaseManager's single
+        // global dbLock. Calling it inline here ran it on the MAIN thread on every level-up
+        // (block-break/mob-kill/etc. XP gain is itself synchronous), and contended dbLock
+        // against every other save/load in the plugin. Under MySQL latency or a busy dbLock
+        // this produced a server-wide TPS stall long enough for lag-dependent duplication
+        // exploits (e.g. rapid block placement racing the save) to land reliably. Hop async,
+        // matching the existing pattern in DevCommand's admin-set-level path.
+        Bukkit.getScheduler().runTaskAsynchronously(plugin, () ->
+                plugin.getDatabaseManager().savePlayerData(data));
     }
 }
