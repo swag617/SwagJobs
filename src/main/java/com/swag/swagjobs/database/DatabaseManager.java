@@ -22,7 +22,13 @@ public class DatabaseManager {
     // and must be closed (returned to the pool) after each use — see getConnection() below.
     // private Connection connection;
     // private final String url;
-    private final Object dbLock = new Object();
+    // NOTE: no dbLock/synchronization here — every method below borrows its own Connection
+    // from SwagAPI's shared HikariCP pool per call (try-with-resources) and returns it when
+    // done. Synchronizing on a shared lock here would serialize every DB call across all
+    // threads (level-up saves, join-time loads, and every synchronous main-thread call),
+    // defeating the entire point of pooling and reintroducing the blocking this migration
+    // was meant to remove. The pool itself is thread-safe and hands out isolated connections,
+    // so concurrent callers are already safe without any additional locking.
 
     // SwagAPI shared database service (injected) — replaces local pool ownership
     private final com.SwagDev.SwagAPI.api.IDatabaseService dbService;
@@ -271,7 +277,7 @@ public class DatabaseManager {
     }
     // MIGRATED: original connect() body (owned its own SQLite connection) retained for reference/rollback.
     // public void connect() {
-    //     synchronized (dbLock) {
+    //     {
     //         try {
     //             if (connection != null && !connection.isClosed()) return;
     //
@@ -291,7 +297,7 @@ public class DatabaseManager {
      */
     public void close() {
         // MIGRATED: pool is owned by SwagAPI — do not close it here.
-        // synchronized (dbLock) {
+        // {
         //     try {
         //         if (connection != null && !connection.isClosed()) {
         //             connection.close();
@@ -403,7 +409,7 @@ public class DatabaseManager {
     }
 
     public PlayerJobData loadPlayerData(UUID uuid) {
-        synchronized (dbLock) {
+        {
             PlayerJobData data = new PlayerJobData(uuid);
             try (Connection connection = getConnection()) {
                 try (PreparedStatement ps = connection.prepareStatement("SELECT job_name, level, xp, prestige, job_points FROM player_jobs WHERE uuid = ?")) {
@@ -470,7 +476,7 @@ public class DatabaseManager {
     }
 
     public void savePlayerData(PlayerJobData data) {
-        synchronized (dbLock) {
+        {
             Connection connection = null;
             try {
                 connection = getConnection();
@@ -564,7 +570,7 @@ public class DatabaseManager {
 
 
     public boolean claimReward(UUID uuid, String jobName, int level, int prestige) {
-        synchronized (dbLock) {
+        {
             String updateSql = "UPDATE player_rewards SET claimed = 1 WHERE uuid = ? AND job_name = ? AND level = ? AND prestige = ?";
             String insertSql = "INSERT INTO player_rewards (uuid, job_name, level, money, claimed, prestige) VALUES (?, ?, ?, 0, 1, ?)";
             try (Connection connection = getConnection();
@@ -598,7 +604,7 @@ public class DatabaseManager {
      * This is called when a player prestiges to clean up old prestige rewards.
      */
     public void deletePrestigeRewards(UUID uuid, com.swag.swagjobs.model.Job job, int prestige) {
-        synchronized (dbLock) {
+        {
             String sql = "DELETE FROM player_rewards WHERE uuid = ? AND job_name = ? AND prestige = ?";
             try (Connection connection = getConnection();
                  PreparedStatement ps = connection.prepareStatement(sql)) {
@@ -614,7 +620,7 @@ public class DatabaseManager {
     }
 
     public void addSmelterBlock(UUID uuid, String world, int x, int y, int z, String blockType) {
-        synchronized (dbLock) {
+        {
             try (Connection connection = getConnection();
                  PreparedStatement ps = connection.prepareStatement(
                     dbService.isMySQL()
@@ -634,7 +640,7 @@ public class DatabaseManager {
     }
 
     public void removeSmelterBlock(String world, int x, int y, int z) {
-        synchronized (dbLock) {
+        {
             try (Connection connection = getConnection();
                  PreparedStatement ps = connection.prepareStatement(
                     "DELETE FROM player_smelter_blocks WHERE world = ? AND x = ? AND y = ? AND z = ?")) {
@@ -650,7 +656,7 @@ public class DatabaseManager {
     }
 
     public int getSmelterBlockCount(UUID uuid) {
-        synchronized (dbLock) {
+        {
             try (Connection connection = getConnection();
                  PreparedStatement ps = connection.prepareStatement(
                     "SELECT COUNT(*) FROM player_smelter_blocks WHERE uuid = ?")) {
@@ -668,7 +674,7 @@ public class DatabaseManager {
     }
 
     public UUID getSmelterOwnerUUID(String world, int x, int y, int z) {
-        synchronized (dbLock) {
+        {
             try (Connection connection = getConnection();
                  PreparedStatement ps = connection.prepareStatement(
                     "SELECT uuid FROM player_smelter_blocks WHERE world = ? AND x = ? AND y = ? AND z = ? LIMIT 1"
@@ -691,7 +697,7 @@ public class DatabaseManager {
     }
 
     public int getShopPurchaseCount(UUID uuid, String itemId) {
-        synchronized (dbLock) {
+        {
             try (Connection connection = getConnection();
                  PreparedStatement ps = connection.prepareStatement(
                     "SELECT COUNT(*) FROM prestige_shop_purchases WHERE uuid = ? AND item_id = ?")) {
@@ -708,7 +714,7 @@ public class DatabaseManager {
     }
 
     public void insertShopPurchase(UUID uuid, String playerName, String itemId, int cost, long timestamp) {
-        synchronized (dbLock) {
+        {
             try (Connection connection = getConnection();
                  PreparedStatement ps = connection.prepareStatement(
                     "INSERT INTO prestige_shop_purchases (uuid, player_name, item_id, cost, timestamp) VALUES (?,?,?,?,?)")) {
@@ -729,7 +735,7 @@ public class DatabaseManager {
      * first `cap` registered smelter blocks (ordered by insertion id ASC).
      */
     public boolean isSmelterBlockWithinCap(UUID uuid, String world, int x, int y, int z, int cap) {
-        synchronized (dbLock) {
+        {
             if (cap <= 0) return false;
             try (Connection connection = getConnection();
                  PreparedStatement ps = connection.prepareStatement(
@@ -771,7 +777,7 @@ public class DatabaseManager {
 
     /** Returns the top players for a job, ordered by prestige, then level, then XP (all descending). */
     public List<TopEntry> getTopPlayers(com.swag.swagjobs.model.Job job, int limit) {
-        synchronized (dbLock) {
+        {
             List<TopEntry> results = new ArrayList<>();
             try (Connection connection = getConnection();
                  PreparedStatement ps = connection.prepareStatement(
@@ -800,7 +806,7 @@ public class DatabaseManager {
      * today's date) only the first time this is called for a given player on a given day.
      */
     public boolean tryClaimDailyBonus(UUID uuid) {
-        synchronized (dbLock) {
+        {
             String today = java.time.LocalDate.now().toString();
             try (Connection connection = getConnection()) {
                 try (PreparedStatement ps = connection.prepareStatement(
