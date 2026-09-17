@@ -119,7 +119,6 @@ public class SwagJobsPlugin extends JavaPlugin {
                     JobsCommand jobsCmd = new JobsCommand(this);
                     JobsTabCompleter jobsTab = new JobsTabCompleter(this);
                     DevCommand devCmd = new DevCommand(this);
-                    JobsTabCompleter devTab = new JobsTabCompleter(this);
                     GrantTagCommand grantTagCmd = new GrantTagCommand(this);
 
                     boolean jobsRegistered = false;
@@ -140,7 +139,7 @@ public class SwagJobsPlugin extends JavaPlugin {
                     try {
                         if (getCommand("SwagJobsdev") != null) {
                             getCommand("SwagJobsdev").setExecutor(devCmd);
-                            getCommand("SwagJobsdev").setTabCompleter(devTab);
+                            getCommand("SwagJobsdev").setTabCompleter(devCmd);
                             devRegistered = true;
                         } else {
                             getLogger().info("'SwagJobsdev' command not present (skipping).");
@@ -155,7 +154,7 @@ public class SwagJobsPlugin extends JavaPlugin {
                         getLogger().info("Force-registered 'jobs' into CommandMap via reflection.");
                     }
                     if (!devRegistered && getConfig().getBoolean("dev-command-enabled", true)) {
-                        tryRegisterCommandForce("SwagJobsdev", devCmd, devTab);
+                        tryRegisterCommandForce("SwagJobsdev", devCmd, devCmd);
                         devRegistered = true;
                         getLogger().info("Force-registered 'SwagJobsdev' into CommandMap via reflection.");
                     }
@@ -174,7 +173,7 @@ public class SwagJobsPlugin extends JavaPlugin {
 
                     for (Player player : getServer().getOnlinePlayers()) {
                         try {
-                            playerDataManager.loadPlayer(player);
+                            playerDataManager.loadPlayerAsync(player.getUniqueId());
                         } catch (Exception ex) {
                             getLogger().warning("Failed to load player data for " + player.getName() + ": " + ex.getMessage());
                             ex.printStackTrace();

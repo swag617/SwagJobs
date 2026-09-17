@@ -7,11 +7,13 @@ import com.swag.swagjobs.model.PlayerJobData;
 import com.swag.swagjobs.model.Reward;
 // MIGRATED: net.milkbowl.vault.economy.Economy replaced by SwagAPI IEconomyService
 // import net.milkbowl.vault.economy.Economy;
+import org.bukkit.Bukkit;
 import org.bukkit.entity.Player;
 
 import java.util.Map;
 import java.util.UUID;
 import java.util.List;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
 
 public class PlayerDataManager {
@@ -23,8 +25,22 @@ public class PlayerDataManager {
         this.cachedData = new ConcurrentHashMap<>();
     }
 
-    public void loadPlayer(Player player) {
-        getPlayerData(player.getUniqueId());
+    /**
+     * Asynchronously loads (or returns the already-cached) job data for {@code uuid} without
+     * blocking the calling thread on a JDBC round trip. Used from PlayerJoinEvent instead of
+     * the synchronous {@link #getPlayerData(UUID)} — {@code buildPlayerData} below issues
+     * synchronous SELECTs via DatabaseManager, which must never run on the main thread during
+     * join (same class of bug as the SwagJobs level-up sync-save fixed earlier this session).
+     * The returned future completes off the main thread; callers touching Bukkit API in the
+     * continuation must hop back with {@code Bukkit.getScheduler().runTask(...)}.
+     */
+    public CompletableFuture<PlayerJobData> loadPlayerAsync(UUID uuid) {
+        PlayerJobData cached = cachedData.get(uuid);
+        if (cached != null) return CompletableFuture.completedFuture(cached);
+        CompletableFuture<PlayerJobData> future = new CompletableFuture<>();
+        Bukkit.getScheduler().runTaskAsynchronously(plugin, () ->
+                future.complete(cachedData.computeIfAbsent(uuid, this::buildPlayerData)));
+        return future;
     }
 
     public void unloadPlayer(Player player) {
@@ -35,30 +51,39 @@ public class PlayerDataManager {
         }
     }
 
+    /**
+     * Returns cached job data for {@code uuid}, loading it synchronously (blocking) on a cache
+     * miss. Safe to call from the main thread for command/GUI paths that need the data
+     * immediately and can rely on the join handler having already warmed the cache via
+     * {@link #loadPlayerAsync(UUID)} — this is only a fallback for a player acting before that
+     * async load has landed, or after a reload evicted the cache.
+     */
     public PlayerJobData getPlayerData(UUID uuid) {
-        return cachedData.computeIfAbsent(uuid, id -> {
-            PlayerJobData data = plugin.getDatabaseManager().loadPlayerData(id);
-            if (data == null) {
-                data = new PlayerJobData(id);
-            }
+        return cachedData.computeIfAbsent(uuid, this::buildPlayerData);
+    }
 
-            for (Job job : Job.values()) {
-                JobProgress progress = data.getJobProgress(job);
-                for (int i = 1; i <= progress.getLevel(); i++) {
-                    final int level = i;
-                    final int prestige = progress.getPrestige();
+    private PlayerJobData buildPlayerData(UUID id) {
+        PlayerJobData data = plugin.getDatabaseManager().loadPlayerData(id);
+        if (data == null) {
+            data = new PlayerJobData(id);
+        }
 
-                    boolean exists = data.getRewards().stream()
-                            .anyMatch(r -> r.getJob() == job && r.getLevel() == level && r.getPrestige() == prestige);
+        for (Job job : Job.values()) {
+            JobProgress progress = data.getJobProgress(job);
+            for (int i = 1; i <= progress.getLevel(); i++) {
+                final int level = i;
+                final int prestige = progress.getPrestige();
 
-                    if (!exists) {
-                        double amount = plugin.getJobsConfig().getMoneyReward(level, prestige);
-                        data.addReward(new Reward(job, level, prestige, amount, false));
-                    }
+                boolean exists = data.getRewards().stream()
+                        .anyMatch(r -> r.getJob() == job && r.getLevel() == level && r.getPrestige() == prestige);
+
+                if (!exists) {
+                    double amount = plugin.getJobsConfig().getMoneyReward(level, prestige);
+                    data.addReward(new Reward(job, level, prestige, amount, false));
                 }
             }
-            return data;
-        });
+        }
+        return data;
     }
 
     public void saveAll() {
