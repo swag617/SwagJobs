@@ -144,7 +144,14 @@ public class PlayerDataManager {
             claimedCount++;
         }
 
-        plugin.getDatabaseManager().savePlayerData(data);
+        // PERF FIX: savePlayerData() does a batched upsert across every Job plus a
+        // per-unclaimed-reward round trip (same pattern documented on JobManager's levelUp()
+        // save). Calling it inline here blocked the main thread on "claim all", and became
+        // noticeably slow (multi-second) once the DatabaseManager migration pointed these
+        // round trips at a real network MySQL connection instead of a local SQLite file. Hop
+        // async, matching JobManager's existing fix for the identical call.
+        Bukkit.getScheduler().runTaskAsynchronously(plugin, () ->
+                plugin.getDatabaseManager().savePlayerData(data));
 
         if (economyUsable && total > 0.0) {
             try {

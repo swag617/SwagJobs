@@ -136,7 +136,15 @@ public class GUIListener implements Listener {
                                 plugin.getEcoService().deposit(player, amount);
                             }
 
-                            plugin.getDatabaseManager().savePlayerData(playerData);
+                            // PERF FIX: savePlayerData() does a batched upsert across every Job plus a
+                            // per-unclaimed-reward round trip (same pattern documented on JobManager's
+                            // levelUp() save). Calling it inline here blocked the main thread on every
+                            // single reward claim once the DatabaseManager migration pointed these round
+                            // trips at a real network MySQL connection instead of a local SQLite file -
+                            // players with many tracked reward rows saw a multi-second stall on claim.
+                            // Hop async, matching JobManager's existing fix for the identical call.
+                            Bukkit.getScheduler().runTaskAsynchronously(plugin, () ->
+                                    plugin.getDatabaseManager().savePlayerData(playerData));
 
                             player.sendMessage("§a§lCLAIMED! §7Level " + level + " reward: §a₣" + String.format("%.2f", amount));
                             player.playSound(player.getLocation(), org.bukkit.Sound.ENTITY_EXPERIENCE_ORB_PICKUP, 1f, 1f);
